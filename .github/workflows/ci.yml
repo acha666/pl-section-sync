@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - run: docker build -t pl-section-sync-dev .devcontainer
+      - run: >-
+          docker run --rm --init --user "$(id -u):$(id -g)"
+          -e npm_config_cache=/tmp/npm-cache
+          --mount "type=bind,source=$PWD,target=/workspace"
+          pl-section-sync-dev sh -c 'npm ci && npm run verify'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: extension
+          path: release/*.zip
+          if-no-files-found: error

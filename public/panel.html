@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Section Sync</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body>
+    <header><h1>Section Sync</h1></header>
+    <main>
+      <p id="notice" class="notice" role="status" aria-live="polite"></p>
+      <section aria-label="Course">
+        <div class="heading">
+          <h2 id="course">No course selected</h2>
+          <button id="refresh" class="secondary compact" disabled>Refresh</button>
+        </div>
+        <p id="origin" class="muted"></p>
+        <details id="roster-details" hidden>
+          <summary id="roster-summary">Students</summary>
+          <div id="roster-list" class="scroll-list"></div>
+        </details>
+      </section>
+      <section aria-labelledby="csv-heading">
+        <h2 id="csv-heading">Canvas gradebook</h2>
+        <label for="csv">CSV file</label
+        ><input id="csv" type="file" accept=".csv,text/csv" disabled />
+        <p id="match-summary"></p>
+        <details id="issues" hidden>
+          <summary id="issues-summary">Import issues</summary>
+          <div id="issue-list" class="scroll-list"></div>
+        </details>
+        <details id="matches" hidden>
+          <summary>Matched students</summary>
+          <div id="match-list" class="scroll-list"></div>
+        </details>
+        <div id="mapping-area" hidden>
+          <h3>Section labels</h3>
+          <p class="muted">One label per line. Prefix: <strong>section</strong>.</p>
+          <div id="mappings"></div>
+          <p class="muted">An empty box clears those students’ section assignments.</p>
+          <label for="scope">Students to update</label>
+          <select id="scope">
+            <option value="imported">Matched students in this CSV</option>
+            <option value="replace">All joined PL students</option>
+          </select>
+          <p id="scope-note" class="warning" hidden>
+            Joined students absent from this CSV will lose their section assignments.
+          </p>
+          <label class="check"
+            ><input id="cleanup" type="checkbox" checked />Delete unused, empty section
+            labels</label
+          >
+          <button id="preview">Confirm labels &amp; preview</button>
+        </div>
+      </section>
+      <section id="review" aria-labelledby="review-heading" hidden>
+        <h2 id="review-heading">Review changes</h2>
+        <p id="plan-summary"></p>
+        <div id="changes"></div>
+        <label id="delete-confirm-wrap" class="check warning" hidden
+          ><input id="delete-confirm" type="checkbox" />Approve label deletions. Access-rule
+          references may be removed and cannot be restored by recreating a label.</label
+        >
+        <button id="apply">Apply changes</button>
+      </section>
+      <section id="execution" aria-label="Sync progress" hidden>
+        <progress id="progress" max="1" value="0"></progress>
+        <p id="progress-text" aria-live="polite"></p>
+        <button id="stop" class="secondary" hidden>Stop after current request</button>
+        <details>
+          <summary>Operation log</summary>
+          <ol id="log"></ol>
+        </details>
+      </section>
+      <details class="about">
+        <summary>About &amp; help</summary>
+        <p>
+          Matches Canvas SIS Login ID to PL UIN. Only joined students are updated. Review suggested
+          section splits before previewing.
+        </p>
+        <p>
+          Labels beginning with “section ” are managed, ignoring case. Other labels are preserved.
+        </p>
+        <p>
+          Files are processed locally. No grades are uploaded. No analytics or external backend.
+        </p>
+        <p id="version"></p>
+      </details>
+    </main>
+    <script type="module" src="src/panel.js"></script>
+  </body>
+</html>
