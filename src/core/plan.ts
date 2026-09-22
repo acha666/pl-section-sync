@@ -34,7 +34,7 @@ export function createPlan(
     for (const section of m.sections) {
       requireValue(mapping.has(section), `Review the section mapping for ${section}.`);
       for (const suffix of mapping.get(section)!) {
-        const name = `section ${suffix.trim()}`;
+        const name = `Section ${suffix.trim()}`;
         requireValue(
           suffix.trim() &&
             name.length <= 255 &&

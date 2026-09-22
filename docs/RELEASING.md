@@ -1,6 +1,6 @@
 # Development and releases
 
-Use short-lived branches and pull requests into `main`. Require the CI `verify` job and squash merge. PRs describe the result and validation. No separate development branch or commit-message convention is required.
+Use short-lived branches and pull requests into `master`. Require the CI `verify` job and squash merge. PRs describe the result and validation. No separate development branch or commit-message convention is required.
 
 ## Version a release
 
@@ -23,6 +23,6 @@ Configure the GitHub environment `chrome-web-store`:
 | Variables | `CWS_PUBLISHER_ID`, `CWS_EXTENSION_ID`                    |
 | Secrets   | `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN` |
 
-Run **Store upload** from `main` with a GitHub Release version such as `1.0.0`. It downloads that release's ZIP, verifies its manifest version, uploads once, and checks processing status. Credentials are passed only to the upload container. Uploads are serialized. Check the dashboard before retrying a failed or timed-out upload.
+Run **Store upload** from `master` with a GitHub Release version such as `1.0.0`. It downloads that release's ZIP, verifies its manifest version, uploads once, and checks processing status. Credentials are passed only to the upload container. Uploads are serialized. Check the dashboard before retrying a failed or timed-out upload.
 
 This workflow uploads the package only. Submit it for review in the dashboard; upload success does not mean approval or publication. Store credentials and listing configuration are external to the repository.

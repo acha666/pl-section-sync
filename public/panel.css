@@ -107,6 +107,7 @@ textarea:disabled {
   outline-offset: 2px;
 }
 input[type='file'],
+input[type='text'],
 select,
 textarea {
   width: 100%;

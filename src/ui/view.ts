@@ -1,6 +1,6 @@
 import type { Controller, State } from './controller.js';
 import { capabilities } from './controller.js';
-import type { MatchResult, Plan, Snapshot } from '../core/types.js';
+import type { Mapping, MatchResult, Plan, Snapshot } from '../core/types.js';
 
 function element<K extends keyof HTMLElementTagNameMap>(
   id: string,
@@ -27,9 +27,13 @@ export function createView(controller: Controller) {
   const preview = element('preview', 'button'),
     apply = element('apply', 'button'),
     stop = element('stop', 'button');
+  const pattern = element('regex-pattern', 'input'),
+    replacement = element('regex-replacement', 'input'),
+    replaceLabels = element('replace-labels', 'button');
   const approval = element('delete-confirm', 'input');
   let renderedMatching: MatchResult | undefined,
     renderedSnapshot: Snapshot | undefined,
+    renderedMapping: Mapping | undefined,
     renderedPlan: Plan | undefined;
   refresh.addEventListener('click', () => {
     void controller.refresh();
@@ -47,6 +51,9 @@ export function createView(controller: Controller) {
     if (controller.state.plan)
       element('review', 'section').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
+  replaceLabels.addEventListener('click', () =>
+    controller.replaceLabels(pattern.value, replacement.value),
+  );
   approval.addEventListener('change', () => controller.approve(approval.checked));
   apply.addEventListener('click', () => {
     void controller.apply();
@@ -67,6 +74,7 @@ export function createView(controller: Controller) {
     refresh.disabled = !allowed.refresh;
     csv.disabled = !allowed.csv;
     scope.disabled = cleanup.disabled = !allowed.mapping;
+    pattern.disabled = replacement.disabled = replaceLabels.disabled = !allowed.mapping;
     preview.disabled = !allowed.preview;
     apply.disabled = !allowed.apply;
     stop.disabled = !allowed.stop;
@@ -111,6 +119,9 @@ export function createView(controller: Controller) {
         row.append(el('small', `${m.student.uin} · ${m.sections.join(' | ')}`));
         matchList.append(row);
       }
+    }
+    if (state.mapping !== renderedMapping) {
+      renderedMapping = state.mapping;
       const mappings = element('mappings', 'div');
       mappings.replaceChildren();
       for (const [index, [section, labels]] of [...state.mapping].entries()) {

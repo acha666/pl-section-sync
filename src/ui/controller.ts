@@ -228,6 +228,33 @@ export class Controller {
     ]);
     this.update({ phase: 'editing', plan: undefined, approved: false });
   }
+  replaceLabels(pattern: string, replacement: string) {
+    if (!capabilities(this.state).mapping) return;
+    try {
+      requireValue(pattern.length > 0, 'Enter a regular expression.');
+      const regex = new RegExp(pattern, 'g');
+      const mapping = new Map(
+        [...this.state.mapping].map(([section, labels]) => [
+          section,
+          [
+            ...new Set(
+              labels.map((label) => label.replace(regex, replacement).trim()).filter(Boolean),
+            ),
+          ],
+        ]),
+      );
+      this.update({
+        mapping,
+        phase: 'editing',
+        plan: undefined,
+        approved: false,
+        notice: 'Replacement applied. Review the section labels before previewing.',
+        error: false,
+      });
+    } catch (error) {
+      this.report(error);
+    }
+  }
   options(replace: boolean, cleanup: boolean) {
     if (!capabilities(this.state).mapping) return;
     this.update({ replace, cleanup, phase: 'editing', plan: undefined, approved: false });

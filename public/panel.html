@@ -36,7 +36,25 @@
         </details>
         <div id="mapping-area" hidden>
           <h3>Section labels</h3>
-          <p class="muted">One label per line. Prefix: <strong>section</strong>.</p>
+          <p class="muted">One label per line. Prefix: <strong>Section</strong>.</p>
+          <details>
+            <summary>Clean up labels with regex</summary>
+            <label for="regex-pattern">Regular expression</label>
+            <input
+              id="regex-pattern"
+              type="text"
+              placeholder="^APSC_V 160 (\S+) 2026W1$"
+              spellcheck="false"
+            />
+            <label for="regex-replacement">Replacement</label>
+            <input id="regex-replacement" type="text" placeholder="$1" spellcheck="false" />
+            <p class="muted">
+              Use JavaScript regex without / delimiters. Replaces all matches in each current label,
+              before the Section prefix. Use $1, $2 for capture groups; leave replacement empty to
+              delete matches. You can apply multiple rules in sequence.
+            </p>
+            <button id="replace-labels" class="secondary">Replace in labels</button>
+          </details>
           <div id="mappings"></div>
           <p class="muted">An empty box clears those students’ section assignments.</p>
           <label for="scope">Students to update</label>
@@ -80,7 +98,7 @@
           section splits before previewing.
         </p>
         <p>
-          Labels beginning with “section ” are managed, ignoring case. Other labels are preserved.
+          Labels beginning with “Section ” are managed, ignoring case. Other labels are preserved.
         </p>
         <p>
           Files are processed locally. No grades are uploaded. No analytics or external backend.

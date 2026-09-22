@@ -8,12 +8,16 @@ Download and extract the extension ZIP from GitHub Releases. In `chrome://extens
 
 1. Open PrairieLearn **Students** or **Student labels** and click the extension icon. Check the selected course and site.
 2. Choose a Canvas Gradebook CSV containing `ID`, `SIS Login ID`, and `Section`.
-3. Review section labels. Each line becomes a `section …` label; an empty box clears those students’ assignments. Select **Confirm labels & preview**.
+3. Review section labels. Each line becomes a `Section …` label; an empty box clears those students’ assignments. Select **Confirm labels & preview**.
 4. Review changes, approve any label deletions, and select **Apply changes**. Keep the panel and source tab open until verification finishes, then refresh PrairieLearn.
+
+Use **Clean up labels with regex** to replace text in all current label suggestions. Patterns use JavaScript regex syntax without `/` delimiters; replacement supports `$1`, `$2`, etc. All matches are replaced, unmatched labels are preserved, and empty results are removed. Rules apply in sequence, before the `Section ` prefix is added.
+
+For example, replace `^APSC_V 160 (\S+) 2026W1$` with `$1` to get `102` and `L1W`. Then replace `^(\d+)$` with `Lecture $1` and `^(L\w+)$` with `Lab $1` to generate `Section Lecture 102` and `Section Lab L1W`.
 
 Only joined students with a unique, exact `SIS Login ID = UIN` match are updated. Leading zeros and case are preserved. The default scope preserves students outside the CSV. **All joined PL students** also clears assignments for eligible students absent from the CSV; unresolved import issues block that scope. Students without unique identifiers and non-joined enrollments are preserved.
 
-Labels beginning with `section ` are managed case-insensitively. Other labels are preserved. Cleanup deletes unused, empty managed labels, including preexisting ones. **Deleting a label may remove assessment access-rule references; recreating its name does not restore them.**
+Labels beginning with `Section ` are managed case-insensitively. Other labels are preserved. Cleanup deletes unused, empty managed labels, including preexisting ones. **Deleting a label may remove assessment access-rule references; recreating its name does not restore them.**
 
 Writes are checked before and after each operation. **Stop after current request** stops between verified operations. After interruption or failure, refresh students and import the same CSV to review the remaining changes. Completed changes are not rolled back. Avoid concurrent roster or label edits.
 
