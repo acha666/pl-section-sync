@@ -59,7 +59,7 @@ test('editing invalidates preview and deletion approval', async () => {
   assert.equal(controller.state.plan, undefined);
   assert.equal(controller.state.approved, false);
   controller.preview();
-  assert.ok(controller.state.plan.changes.some((c) => c.name === 'section Edited'));
+  assert.ok(controller.state.plan.changes.some((c) => c.name === 'Section Edited'));
 });
 test('successful execution requires a new import and clears recovery marker', async () => {
   const { controller, journal } = setup();
@@ -154,4 +154,29 @@ test('target validation rejects wrong window and malformed course context', () =
     parseTarget({ ...target(), context: { ...context, origin: 'javascript:alert(1)' } }, 1),
   );
   assert.throws(() => parseTarget({ ...target(), context: { ...context, courseId: '456' } }, 1));
+});
+
+test('regex replacement preserves invalid input, deduplicates, and invalidates approval', async () => {
+  const { controller } = setup();
+  await preview(controller);
+  controller.approve(true);
+  const plan = controller.state.plan;
+  controller.replaceLabels('[', '');
+  assert.equal(controller.state.error, true);
+  assert.equal(controller.state.plan, plan);
+  assert.deepEqual(controller.state.mapping.get('New'), ['New']);
+  controller.replaceLabels('', '');
+  assert.equal(controller.state.error, true);
+  controller.edit('New', 'A1\nA2\nOther');
+  controller.preview();
+  controller.approve(true);
+  controller.replaceLabels('A\\d', ' Same ');
+  assert.deepEqual(controller.state.mapping.get('New'), ['Same', 'Other']);
+  assert.equal(controller.state.plan, undefined);
+  assert.equal(controller.state.approved, false);
+  assert.equal(controller.state.error, false);
+  controller.replaceLabels('^Same$', '');
+  assert.deepEqual(controller.state.mapping.get('New'), ['Other']);
+  controller.replaceLabels('^', 'x');
+  assert.deepEqual(controller.state.mapping.get('New'), ['xOther']);
 });
