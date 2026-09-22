@@ -23,21 +23,13 @@ export async function upload({
     item = encodeURIComponent(required('CWS_EXTENSION_ID'));
   async function json(url, options) {
     const response = await request(url, { ...options, signal: AbortSignal.timeout(120000) });
-    if (!response.ok) throw new Error(`Chrome Web Store request failed: HTTP ${response.status}.`);
+    if (!response.ok)
+      throw new Error(
+        `Chrome Web Store request failed: HTTP ${response.status}. Check the dashboard before retrying.`,
+      );
     return response.json();
   }
-  const token = await json('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      client_id: required('CWS_CLIENT_ID'),
-      client_secret: required('CWS_CLIENT_SECRET'),
-      refresh_token: required('CWS_REFRESH_TOKEN'),
-    }),
-  });
-  if (typeof token.access_token !== 'string')
-    throw new Error('OAuth did not return an access token.');
-  const headers = { Authorization: `Bearer ${token.access_token}` };
+  const headers = { Authorization: `Bearer ${required('CWS_ACCESS_TOKEN')}` };
   const name = `publishers/${publisher}/items/${item}`;
   const result = await json(`https://chromewebstore.googleapis.com/upload/v2/${name}:upload`, {
     method: 'POST',
@@ -62,11 +54,25 @@ export async function upload({
     throw new Error(
       `Upload did not succeed: ${state ?? 'unknown'}. Check the dashboard before retrying.`,
     );
-  return version;
+  const submission = await json(`https://chromewebstore.googleapis.com/v2/${name}:publish`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ publishType: 'DEFAULT_PUBLISH', blockOnWarnings: true }),
+  });
+  if (!['PENDING_REVIEW', 'PUBLISHED', 'PUBLISHED_TO_TESTERS'].includes(submission.state))
+    throw new Error(
+      `Unexpected submission state: ${submission.state ?? 'unknown'}. Check the dashboard before retrying.`,
+    );
+  return submission.state;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const version = process.env.RELEASE_VERSION;
   if (!version || !/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid release version.');
-  await upload({ version, zip: await readFile(`release/pl-section-sync-${version}.zip`) });
-  console.log(`Uploaded ${version}. Submit it for review in the Chrome Web Store dashboard.`);
+  const state = await upload({
+    version,
+    zip: await readFile(`release/pl-section-sync-${version}.zip`),
+  });
+  console.log(
+    `Submitted ${version}: ${state}. Check review and publication status in the Chrome Web Store dashboard.`,
+  );
 }

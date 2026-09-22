@@ -12,17 +12,19 @@ Patch versions fix defects; minor versions add compatible functionality; major v
 
 The tag workflow checks the version and changelog, runs the container checks, and attaches the extension ZIP to a GitHub Release. Release notes come from the changelog. GitHub provides source archives from the tag. Never replace a published version's tag or ZIP; issue a new version.
 
-## Chrome Web Store upload
+## Chrome Web Store publishing
 
-Create the store item and complete its listing and privacy details in the developer dashboard. Enable the Chrome Web Store API and obtain OAuth credentials with the `chromewebstore` scope using the [official setup guide](https://developer.chrome.com/docs/webstore/using-api).
+Create the store item and complete its listing and privacy details in the developer dashboard. Enable the Chrome Web Store API and link the Google service account in the dashboard's Account section using the [official service account guide](https://developer.chrome.com/docs/webstore/service-accounts).
 
-Configure the GitHub environment `chrome-web-store`:
+Configure [Workload Identity Federation through a service account](https://github.com/google-github-actions/auth#workload-identity-federation-through-a-service-account) for this repository. No stored OAuth secrets are required.
 
-| Kind      | Names                                                     |
-| --------- | --------------------------------------------------------- |
-| Variables | `CWS_PUBLISHER_ID`, `CWS_EXTENSION_ID`                    |
-| Secrets   | `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN` |
+Configure these variables in the GitHub environment `chrome-web-store`, allowing `master` and version tags:
 
-Run **Store upload** from `master` with a GitHub Release version such as `1.0.0`. It downloads that release's ZIP, verifies its manifest version, uploads once, and checks processing status. Credentials are passed only to the upload container. Uploads are serialized. Check the dashboard before retrying a failed or timed-out upload.
+| Kind      | Names                                                   |
+| --------- | ------------------------------------------------------- |
+| Variables | `CWS_PUBLISHER_ID`, `CWS_EXTENSION_ID`                  |
+| Variables | `GCP_SERVICE_ACCOUNT`, `GCP_WORKLOAD_IDENTITY_PROVIDER` |
 
-This workflow uploads the package only. Submit it for review in the dashboard; upload success does not mean approval or publication. Store credentials and listing configuration are external to the repository.
+After a tag release succeeds, **Publish Chrome Extension** uploads its ZIP and submits it for review. To publish an existing GitHub Release, run it manually from `master` with a version such as `1.1.0`. It verifies the ZIP version and waits for upload processing to succeed before submitting. Store jobs are serialized.
+
+Validation warnings block submission; approval triggers publication. Check the dashboard before retrying failures or timeouts, as reruns upload again. Store credentials and listing configuration are external to the repository.

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.1.1 (2026-09-22)
+
+- Publish Chrome Web Store releases using GitHub OIDC, automatically after tag releases or manually.
+
 ## 1.1.0 (2026-09-21)
 
 - Add regex replacement for suggested section labels, including capture groups and sequential rules.
