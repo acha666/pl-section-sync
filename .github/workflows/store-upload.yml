@@ -1,5 +1,10 @@
-name: Store upload
+name: Publish Chrome Extension
 on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
   workflow_dispatch:
     inputs:
       version:
@@ -8,12 +13,13 @@ on:
         required: true
 permissions:
   contents: read
+  id-token: write
 concurrency:
   group: chrome-web-store
   cancel-in-progress: false
 jobs:
-  upload:
-    if: github.ref == 'refs/heads/master'
+  publish:
+    if: github.ref == 'refs/heads/master' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: chrome-web-store
@@ -33,17 +39,25 @@ jobs:
           -e npm_config_cache=/tmp/npm-cache
           --mount "type=bind,source=$PWD,target=/workspace"
           pl-section-sync-dev npm ci
-      - name: Upload package
+      - name: Authenticate to Google
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Upload and submit for review
         env:
           RELEASE_VERSION: ${{ inputs.version }}
           CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
           CWS_EXTENSION_ID: ${{ vars.CWS_EXTENSION_ID }}
-          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
-          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
-          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: >-
           docker run --rm --user "$(id -u):$(id -g)"
           -e RELEASE_VERSION -e CWS_PUBLISHER_ID -e CWS_EXTENSION_ID
-          -e CWS_CLIENT_ID -e CWS_CLIENT_SECRET -e CWS_REFRESH_TOKEN
+          -e CWS_ACCESS_TOKEN
           --mount "type=bind,source=$PWD,target=/workspace"
           pl-section-sync-dev node scripts/store-upload.mjs

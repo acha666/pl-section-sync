@@ -9,10 +9,15 @@ concurrency:
   cancel-in-progress: false
 jobs:
   release:
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
+      - name: Read release version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
       - run: docker build -t pl-section-sync-dev .devcontainer
       - name: Verify and package
         env:
@@ -27,3 +32,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: gh release create "$RELEASE_TAG" release/*.zip --verify-tag --title "$RELEASE_TAG" --notes-file release/notes.md
+  publish:
+    needs: release
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/store-upload.yml
+    with:
+      version: ${{ needs.release.outputs.version }}

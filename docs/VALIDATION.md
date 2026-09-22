@@ -19,4 +19,4 @@ Use a disposable course instance or authorized test roster.
 5. Stop during a sync, then reimport and finish the remaining changes. Close and reopen the panel during a sync and check the recovery reminder.
 6. Verify read-only accounts and expired sessions. Use two Chrome windows and select another course while syncing; the running target must remain fixed.
 
-Store uploading is tested with mocked HTTP responses. A live upload requires publisher credentials and an existing store item.
+Store uploading and review submission are tested with mocked HTTP responses. Live publishing requires an authorized service account and an existing store item.
