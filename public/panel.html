@@ -10,10 +10,17 @@
     <header><h1>Section Sync</h1></header>
     <main>
       <p id="notice" class="notice" role="status" aria-live="polite"></p>
-      <section aria-label="Course">
+      <section aria-labelledby="course">
         <div class="heading">
           <h2 id="course">No course selected</h2>
-          <button id="refresh" class="secondary compact" disabled>Refresh</button>
+          <button
+            id="refresh"
+            class="secondary compact"
+            title="Reload students and labels from PrairieLearn"
+            disabled
+          >
+            Refresh
+          </button>
         </div>
         <p id="origin" class="muted"></p>
         <details id="roster-details" hidden>
@@ -23,7 +30,7 @@
       </section>
       <section aria-labelledby="csv-heading">
         <h2 id="csv-heading">Canvas gradebook</h2>
-        <label for="csv">CSV file</label
+        <label for="csv">CSV export with ID, SIS Login ID, and Section columns</label
         ><input id="csv" type="file" accept=".csv,text/csv" disabled />
         <p id="match-summary"></p>
         <details id="issues" hidden>
@@ -34,47 +41,60 @@
           <summary>Matched students</summary>
           <div id="match-list" class="scroll-list"></div>
         </details>
-        <div id="mapping-area" hidden>
-          <h3>Section labels</h3>
-          <p class="muted">One label per line. Prefix: <strong>Section</strong>.</p>
+      </section>
+      <section id="mapping-area" aria-labelledby="mapping-heading" hidden>
+        <h2 id="mapping-heading">Section labels</h2>
+        <fieldset id="mapping-fields">
+          <p class="muted">
+            One label per line; each becomes <strong>Section …</strong>. An empty box clears those
+            students’ section labels.
+          </p>
           <details>
             <summary>Clean up labels with regex</summary>
-            <label for="regex-pattern">Regular expression</label>
-            <input
-              id="regex-pattern"
-              type="text"
-              placeholder="^APSC_V 160 (\S+) 2026W1$"
-              spellcheck="false"
-            />
-            <label for="regex-replacement">Replacement</label>
-            <input id="regex-replacement" type="text" placeholder="$1" spellcheck="false" />
-            <p class="muted">
-              Use JavaScript regex without / delimiters. Replaces all matches in each current label,
-              before the Section prefix. Use $1, $2 for capture groups; leave replacement empty to
-              delete matches. You can apply multiple rules in sequence.
-            </p>
-            <button id="replace-labels" class="secondary">Replace in labels</button>
+            <form id="regex">
+              <label for="regex-pattern">Regular expression</label>
+              <input
+                id="regex-pattern"
+                type="text"
+                placeholder="^APSC_V 160 (\S+) 2026W1$"
+                spellcheck="false"
+                autocomplete="off"
+              />
+              <label for="regex-replacement">Replacement</label>
+              <input
+                id="regex-replacement"
+                type="text"
+                placeholder="$1"
+                spellcheck="false"
+                autocomplete="off"
+              />
+              <p class="muted">
+                JavaScript syntax without / delimiters. Replaces every match in each label, before
+                the Section prefix is added. Use $1, $2 for capture groups; leave the replacement
+                empty to delete matches. Apply rules one after another.
+              </p>
+              <button class="secondary">Replace in labels</button>
+            </form>
           </details>
           <div id="mappings"></div>
-          <p class="muted">An empty box clears those students’ section assignments.</p>
           <label for="scope">Students to update</label>
           <select id="scope">
             <option value="imported">Matched students in this CSV</option>
             <option value="replace">All joined PL students</option>
           </select>
           <p id="scope-note" class="warning" hidden>
-            Joined students absent from this CSV will lose their section assignments.
+            Joined students absent from this CSV will lose their section labels.
           </p>
           <label class="check"
             ><input id="cleanup" type="checkbox" checked />Delete unused, empty section
             labels</label
           >
-          <button id="preview">Confirm labels &amp; preview</button>
-        </div>
+        </fieldset>
+        <button id="preview">Confirm labels &amp; preview</button>
       </section>
       <section id="review" aria-labelledby="review-heading" hidden>
         <h2 id="review-heading">Review changes</h2>
-        <p id="plan-summary"></p>
+        <p id="plan-summary" class="muted"></p>
         <div id="changes"></div>
         <label id="delete-confirm-wrap" class="check warning" hidden
           ><input id="delete-confirm" type="checkbox" />Approve label deletions. Access-rule
@@ -82,12 +102,13 @@
         >
         <button id="apply">Apply changes</button>
       </section>
-      <section id="execution" aria-label="Sync progress" hidden>
-        <progress id="progress" max="1" value="0"></progress>
+      <section id="execution" aria-labelledby="execution-heading" hidden>
+        <h2 id="execution-heading">Sync progress</h2>
+        <progress id="progress" max="1" value="0" aria-labelledby="execution-heading"></progress>
         <p id="progress-text" aria-live="polite"></p>
         <button id="stop" class="secondary" hidden>Stop after current request</button>
         <details>
-          <summary>Operation log</summary>
+          <summary>Completed operations</summary>
           <ol id="log"></ol>
         </details>
       </section>

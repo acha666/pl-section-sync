@@ -21,10 +21,12 @@ function setup(overrides = {}) {
   const controller = new Controller(
     {
       client: () => client,
-      journal: async (key, value) => {
-        if (value === null) journal.delete(key);
-        else if (value !== undefined) journal.set(key, value);
-        return journal.get(key);
+      storage: {
+        get: async (key) => ({ [key]: journal.get(key) }),
+        set: async (items) => {
+          for (const [key, value] of Object.entries(items)) journal.set(key, value);
+        },
+        remove: async (key) => journal.delete(key),
       },
       lock: async (task) => {
         await task();
@@ -85,6 +87,9 @@ test('failed execution keeps journal and disables stale preview', async () => {
   assert.equal(journal.size, 1);
   assert.equal(capabilities(controller.state).apply, false);
   assert.match(controller.state.notice, /Denied/);
+  await controller.refresh();
+  assert.match(controller.state.notice, /interrupted after 0 of 4 operations/);
+  assert.equal(controller.state.error, true);
 });
 test('read-only accounts can preview but cannot apply even after approval', async () => {
   const client = fakeClient({ ...snapshot(), canEdit: false });
@@ -162,6 +167,26 @@ test('target validation rejects wrong window and malformed course context', () =
     ),
   );
 });
+test('clicking the icon on an unrelated tab keeps the loaded course and work', async () => {
+  const { controller } = setup();
+  await preview(controller);
+  const plan = controller.state.plan;
+  await controller.accept({ windowId: 1, nonce: 'other', error: 'Open a PrairieLearn page.' });
+  assert.equal(controller.state.phase, 'preview');
+  assert.equal(controller.state.plan, plan);
+  assert.match(controller.state.notice, /Still using Example course/);
+  const fresh = setup().controller;
+  await fresh.accept({ windowId: 1, nonce: 'other', error: 'Open a PrairieLearn page.' });
+  assert.equal(fresh.state.phase, 'empty');
+});
+test('a failed CSV import clears the file name so the same file can be chosen again', async () => {
+  const { controller } = setup();
+  await controller.accept(target());
+  await controller.importCsv({ ...file(), text: async () => 'ID,Section\n1,A' });
+  assert.equal(controller.state.phase, 'ready');
+  assert.equal(controller.state.filename, '');
+  assert.match(controller.state.notice, /Missing CSV column/);
+});
 
 test('regex replacement preserves invalid input, deduplicates, and invalidates approval', async () => {
   const { controller } = setup();
@@ -186,4 +211,13 @@ test('regex replacement preserves invalid input, deduplicates, and invalidates a
   assert.deepEqual(controller.state.mapping.get('New'), ['Other']);
   controller.replaceLabels('^', 'x');
   assert.deepEqual(controller.state.mapping.get('New'), ['xOther']);
+});
+test('mapping edits produce a new mapping instead of mutating the previous one', async () => {
+  const { controller } = setup();
+  await preview(controller);
+  const before = controller.state.mapping;
+  controller.edit('New', ' A \n\nA\nB ');
+  assert.notEqual(controller.state.mapping, before);
+  assert.deepEqual(before.get('New'), ['New']);
+  assert.deepEqual(controller.state.mapping.get('New'), ['A', 'B']);
 });

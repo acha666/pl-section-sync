@@ -8,17 +8,7 @@ let render: (state: State) => void = () => {};
 const controller = new Controller(
   {
     client: createClient,
-    async journal(key, value) {
-      if (value === undefined) return (await chrome.storage.session.get(key))[key] as unknown;
-      if (value === null) await chrome.storage.session.remove(key);
-      else
-        await chrome.storage.session.set({
-          [key]:
-            value === true
-              ? { phase: 'starting' }
-              : { phase: value.phase, completed: value.index, total: value.total },
-        });
-    },
+    storage: chrome.storage.session,
     async lock(task) {
       return navigator.locks.request('pl-section-sync', { ifAvailable: true }, async (lock) => {
         if (!lock) return false;

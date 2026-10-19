@@ -15,7 +15,16 @@ function setup() {
 }
 test('complete sync orders creates, adds, removes, deletes and is idempotent', async () => {
   const { s, client, matching, plan } = setup();
-  const result = await execute(client, s, plan);
+  const events = [];
+  const result = await execute(client, s, plan, {
+    onProgress: (p) => events.push(`${p.phase} ${p.completed}/${p.total} ${p.operation.type}`),
+  });
+  assert.deepEqual(events.slice(0, 3), [
+    'sending 0/4 create',
+    'verified 1/4 create',
+    'sending 1/4 add',
+  ]);
+  assert.equal(events.at(-1), 'verified 4/4 destroy');
   assert.deepEqual(
     client.calls.map((c) => c.method),
     ['upsert', 'batchAdd', 'batchRemove', 'destroy'],

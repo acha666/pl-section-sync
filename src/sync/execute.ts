@@ -122,13 +122,7 @@ export async function execute(
       };
     }
     signal?.throwIfAborted();
-    await onProgress({
-      phase: 'sending',
-      index,
-      total: queue.length,
-      type: op.type,
-      name: op.name,
-    });
+    await onProgress({ phase: 'sending', completed: index, total: queue.length, operation: op });
     signal?.throwIfAborted();
     let result: unknown, failure: unknown;
     try {
@@ -150,10 +144,9 @@ export async function execute(
     expected = after;
     await onProgress({
       phase: 'verified',
-      index: index + 1,
+      completed: index + 1,
       total: queue.length,
-      type: op.type,
-      name: op.name,
+      operation: op,
     });
   }
   const final = await client.read();

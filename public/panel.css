@@ -1,13 +1,42 @@
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
+  --text: #172e32;
+  --muted: #5e7073;
+  --bg: #f5f7f6;
+  --surface: #fff;
+  --line: #dce5e4;
+  --field: #bdccca;
+  --accent: #146b60;
+  --on-accent: #fff;
+  --focus: #83beb2;
+  --info-bg: #e9f4ef;
+  --warning-text: #754709;
+  --warning-bg: #fff1df;
+  --error-text: #8c1d18;
+  --error-bg: #fdecea;
   font:
     14px/1.5 system-ui,
     sans-serif;
-  color: #172e32;
-  background: #f5f7f6;
-  --accent: #146b60;
-  --muted: #5e7073;
-  --line: #dce5e4;
+  color: var(--text);
+  background: var(--bg);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #dfe8e6;
+    --muted: #9db0b2;
+    --bg: #111819;
+    --surface: #1a2324;
+    --line: #2c3a3b;
+    --field: #435557;
+    --accent: #63c2b1;
+    --on-accent: #0c1f1c;
+    --focus: #2e8476;
+    --info-bg: #1b322e;
+    --warning-text: #f2c98f;
+    --warning-bg: #3a2b16;
+    --error-text: #ffb4ab;
+    --error-bg: #3f1d1a;
+  }
 }
 * {
   box-sizing: border-box;
@@ -28,20 +57,24 @@ h1 {
   font-size: 20px;
   margin: 0;
 }
-h2,
-h3 {
+h2 {
   font-size: 14px;
   margin: 0 0 10px;
 }
-h3 {
-  margin-top: 18px;
-}
 section {
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 14px;
   margin-bottom: 12px;
+  /* Keeps scrolled-to sections clear of the sticky notice. */
+  scroll-margin-top: 64px;
+}
+fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
 }
 p {
   margin: 8px 0;
@@ -81,13 +114,13 @@ button {
   border: 1px solid var(--accent);
   border-radius: 6px;
   padding: 9px 12px;
-  color: white;
+  color: var(--on-accent);
   background: var(--accent);
   cursor: pointer;
 }
 button.secondary {
   color: var(--accent);
-  background: white;
+  background: var(--surface);
 }
 button.compact {
   width: auto;
@@ -95,15 +128,15 @@ button.compact {
   padding: 3px 8px;
   font-size: 12px;
 }
-button:disabled,
-input:disabled,
-select:disabled,
-textarea:disabled {
+:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+fieldset:disabled {
+  opacity: 1;
+}
 :focus-visible {
-  outline: 3px solid #83beb2;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 input[type='file'],
@@ -113,10 +146,10 @@ textarea {
   width: 100%;
   min-width: 0;
   padding: 8px;
-  border: 1px solid #bdccca;
+  border: 1px solid var(--field);
   border-radius: 6px;
   color: inherit;
-  background: white;
+  background: var(--surface);
   font-size: 12px;
 }
 textarea {
@@ -132,19 +165,32 @@ textarea {
   flex-shrink: 0;
   accent-color: var(--accent);
 }
+/* The notice stays visible while the user works further down the panel. */
 .notice {
-  background: #e9f4ef;
+  position: sticky;
+  top: 8px;
+  z-index: 1;
+  margin: 0 0 12px;
   padding: 10px;
   border-radius: 6px;
   font-size: 12px;
   white-space: pre-line;
+  background: var(--info-bg);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.15);
 }
-.error,
+.notice.error {
+  color: var(--error-text);
+  background: var(--error-bg);
+}
 .warning {
-  color: #754709;
-  background: #fff1df;
+  color: var(--warning-text);
+  background: var(--warning-bg);
   padding: 10px;
   border-radius: 6px;
+  font-size: 12px;
+}
+.warning-text {
+  color: var(--warning-text);
   font-size: 12px;
 }
 details {
@@ -171,8 +217,7 @@ summary {
   display: block;
 }
 .change p {
-  font-size: 12px;
-  color: var(--muted);
+  margin: 2px 0 0;
 }
 progress {
   width: 100%;

@@ -93,3 +93,19 @@ test('regex rules clean imported labels and update the preview', async ({ page }
   await expect(page.locator('#changes')).toContainText('Section Lecture 102');
   await expect(page.locator('#changes')).toContainText('Section Lab L1W');
 });
+
+test('errors stay visible after scrolling, and Enter applies a regex rule', async ({ page }) => {
+  await page.setViewportSize({ width: 380, height: 500 });
+  await page.goto('/');
+  await expect(page.locator('#csv')).toBeEnabled();
+  await page.getByRole('button', { name: 'Load synthetic CSV' }).click();
+  await page.getByText('Clean up labels with regex', { exact: true }).click();
+  await page.getByLabel('Regular expression', { exact: true }).fill('^(.*)$');
+  await page.getByLabel('Replacement', { exact: true }).fill('x'.repeat(250));
+  await page.getByLabel('Replacement', { exact: true }).press('Enter');
+  await expect(page.locator('#mappings textarea').first()).toHaveValue(/^x{250}$/m);
+  await page.locator('#preview').scrollIntoViewIfNeeded();
+  await page.locator('#preview').click();
+  await expect(page.locator('#notice')).toContainText('1–255 characters');
+  await expect(page.locator('#notice')).toBeInViewport();
+});

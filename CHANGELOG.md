@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Keep status and error messages visible while scrolling the panel.
+- Follow the browser's dark theme.
+- Show section labels as their own step, with the number of students per Canvas section.
+- Keep the loaded course when the extension icon is clicked on an unrelated tab.
+- Allow choosing the same CSV again after an import error.
+- Apply regex rules with Enter, and explain why full replacement is unavailable.
+- Describe review and progress steps in plain language, sorted by label name, without zero counts.
+- Report how far an interrupted sync progressed.
+
 ## 1.1.1 (2026-09-22)
 
 - Publish Chrome Web Store releases using GitHub OIDC, automatically after tag releases or manually.
