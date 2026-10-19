@@ -15,7 +15,7 @@ Use **Clean up labels with regex** to replace text in all current label suggesti
 
 For example, replace `^APSC_V 160 (\S+) 2026W1$` with `$1` to get `102` and `L1W`. Then replace `^(\d+)$` with `Lecture $1` and `^(L\w+)$` with `Lab $1` to generate `Section Lecture 102` and `Section Lab L1W`.
 
-Only joined students with a unique, exact `SIS Login ID = UIN` match are updated. Leading zeros and case are preserved. The default scope preserves students outside the CSV. **All joined PL students** also clears assignments for eligible students absent from the CSV; unresolved import issues block that scope. Students without unique identifiers and non-joined enrollments are preserved.
+Only joined students with a unique, exact `SIS Login ID = UIN` match are updated. Leading zeros and case are preserved. The default scope preserves students outside the CSV. **All joined PL students** also clears assignments for eligible students absent from the CSV; the preview counts and lists them. Canvas records without a Canvas ID or SIS Login ID block that scope, because they might be joined students. Canvas students not in PrairieLearn or not joined, joined students without a Section, and the Canvas Test Student are listed as not updated and do not block it. Students without unique identifiers and non-joined enrollments are preserved.
 
 Labels beginning with `Section ` are managed case-insensitively. Other labels are preserved. Cleanup deletes unused, empty managed labels, including preexisting ones. **Deleting a label may remove assessment access-rule references; recreating its name does not restore them.**
 

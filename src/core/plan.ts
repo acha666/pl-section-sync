@@ -10,7 +10,7 @@ export function createPlan(
   requireValue(!matching.errors.length, matching.errors.join('\n'));
   requireValue(
     !replace || !matching.issues.length,
-    'Resolve all import issues before replacing all joined students.',
+    'Resolve unidentified Canvas students before updating all joined students.',
   );
   const existing = new Map<string, Label>();
   for (const l of snapshot.labels.filter((l) => managed(l.name))) {
@@ -22,13 +22,18 @@ export function createPlan(
   }
   const uins = new Map<string, number>();
   for (const student of snapshot.roster) uins.set(student.uin, (uins.get(student.uin) ?? 0) + 1);
+  const preserved = new Set(matching.preserved),
+    matched = new Set(matching.matches.map((m) => m.student.id));
   const scope = new Set(
     replace
       ? snapshot.roster
-          .filter((s) => s.status === 'joined' && s.uin && uins.get(s.uin) === 1)
+          .filter(
+            (s) => s.status === 'joined' && s.uin && uins.get(s.uin) === 1 && !preserved.has(s.id),
+          )
           .map((s) => s.id)
-      : matching.matches.map((m) => m.student.id),
+      : matched,
   );
+  const labelled = new Set([...existing.values()].flatMap((l) => l.members));
   const desired = new Map<string, { name: string; members: Set<string> }>();
   for (const m of matching.matches)
     for (const section of m.sections) {
@@ -75,6 +80,7 @@ export function createPlan(
   return {
     changes,
     scope: scope.size,
+    absent: sorted([...scope].filter((id) => !matched.has(id) && labelled.has(id))),
     summary: {
       create: changes.filter((c) => c.create).length,
       destroy: changes.filter((c) => c.destroy).length,

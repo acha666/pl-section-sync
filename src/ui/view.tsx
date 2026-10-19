@@ -20,6 +20,8 @@ function describe(op: Operation): string {
       return `Remove ${count(op.ids.length, 'student')} from ${op.name}`;
   }
 }
+const name = (student: Student | undefined, id: string) =>
+  `${student?.name || student?.uid || id} · ${student?.uin || 'No UIN'}`;
 function Row({ title, detail }: { title: string; detail: string }) {
   return (
     <div class="row">
@@ -140,16 +142,14 @@ function Gradebook({ controller, state }: Props) {
         <>
           <p id="match-summary">{`${count(matching.matches.length, 'student')} matched`}</p>
           {issues.length > 0 && (
-            <details open={matching.errors.length > 0}>
-              <summary>{count(issues.length, 'import issue')}</summary>
-              <div class="scroll-list">
-                {issues.map((text, index) => (
-                  <div key={index} class="row">
-                    {text}
-                  </div>
-                ))}
-              </div>
-            </details>
+            <Messages open summary={count(issues.length, 'import issue')}>
+              {issues}
+            </Messages>
+          )}
+          {matching.notes.length > 0 && (
+            <Messages summary={`${count(matching.notes.length, 'student')} not updated`}>
+              {matching.notes}
+            </Messages>
           )}
           {matching.matches.length > 0 && (
             <details>
@@ -163,6 +163,21 @@ function Gradebook({ controller, state }: Props) {
   );
 }
 
+function Messages(props: { open?: boolean; summary: string; children: string[] }) {
+  return (
+    <details open={props.open}>
+      <summary>{props.summary}</summary>
+      <div class="scroll-list">
+        {props.children.map((text, index) => (
+          <div key={index} class="row">
+            {text}
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 function Mapping({ controller, state }: Props) {
   const { matching } = state;
   const students = useMemo(() => {
@@ -173,7 +188,7 @@ function Mapping({ controller, state }: Props) {
   }, [matching]);
   if (!matching || matching.errors.length) return null;
   const allowed = capabilities(state),
-    blocked = matching.issues.length > 0;
+    unidentified = matching.issues.length;
   return (
     <section id="mapping-area" aria-labelledby="mapping-heading">
       <h2 id="mapping-heading">Section labels</h2>
@@ -206,9 +221,9 @@ function Mapping({ controller, state }: Props) {
           }
         >
           <option value="imported">Matched students in this CSV</option>
-          <option value="replace" disabled={blocked}>
-            {blocked
-              ? 'All joined PL students (resolve import issues first)'
+          <option value="replace" disabled={unidentified > 0}>
+            {unidentified
+              ? `All joined PL students (${count(unidentified, 'unidentified student')} in CSV)`
               : 'All joined PL students'}
           </option>
         </select>
@@ -322,6 +337,19 @@ function Review({ controller, state }: Props) {
       <p class="muted">
         {`${count(plan.scope, 'student')} in scope · Labels: ${create} new, ${destroy} deleted · Memberships: ${add} added, ${remove} removed`}
       </p>
+      {plan.absent.length > 0 && (
+        <div id="absent" class="warning">
+          {`${count(plan.absent.length, 'joined student')} absent from this CSV will lose section labels.`}
+          <details>
+            <summary>Students</summary>
+            <ul>
+              {plan.absent.map((id) => (
+                <li key={id}>{name(students.get(id), id)}</li>
+              ))}
+            </ul>
+          </details>
+        </div>
+      )}
       <div id="changes">
         {plan.changes.map((change) => (
           <ChangeRow key={change.key} change={change} students={students} />
@@ -370,14 +398,9 @@ function ChangeRow({ change, students }: { change: Change; students: Map<string,
         <details>
           <summary>Students</summary>
           <ul>
-            {members.map(([verb, id]) => {
-              const student = students.get(id);
-              return (
-                <li key={`${verb}:${id}`}>
-                  {`${verb}: ${student?.name || student?.uid || id} · ${student?.uin || 'No UIN'}`}
-                </li>
-              );
-            })}
+            {members.map(([verb, id]) => (
+              <li key={`${verb}:${id}`}>{`${verb}: ${name(students.get(id), id)}`}</li>
+            ))}
           </ul>
         </details>
       )}

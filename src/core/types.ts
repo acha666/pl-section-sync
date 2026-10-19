@@ -43,7 +43,12 @@ export interface Gradebook {
 export interface MatchResult {
   matches: { student: Student; sections: string[] }[];
   errors: string[];
+  /** Unidentified Canvas records. They might be joined PL students, so they block full replacement. */
   issues: string[];
+  /** Identified Canvas records that are not updated and cannot be cleared by full replacement. */
+  notes: string[];
+  /** Joined enrollments the CSV identifies but cannot assign, kept out of every scope. */
+  preserved: string[];
   total: number;
 }
 export interface Change {
@@ -59,6 +64,8 @@ export interface Change {
 export interface Plan {
   changes: Change[];
   scope: number;
+  /** In-scope enrollments absent from the CSV that lose their section labels. */
+  absent: string[];
   summary: { create: number; destroy: number; add: number; remove: number };
 }
 export type Mapping = Map<string, string[]>;

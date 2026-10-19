@@ -10,6 +10,9 @@
 - Apply regex rules with Enter, and explain why full replacement is unavailable.
 - Describe review and progress steps in plain language, sorted by label name, without zero counts.
 - Report how far an interrupted sync progressed.
+- Allow updating all joined PL students when the CSV includes students who never joined PrairieLearn; only unidentified Canvas records block it.
+- Ignore the Canvas Test Student, and keep joined students without a Section out of full replacement.
+- Count and list joined students absent from the CSV who will lose section labels.
 
 ## 1.1.1 (2026-09-22)
 
