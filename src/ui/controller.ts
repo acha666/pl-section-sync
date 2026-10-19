@@ -199,7 +199,7 @@ export class Controller {
         notice: matching.errors.length
           ? 'Resolve the import errors before previewing.'
           : matching.issues.length
-            ? 'Students with import issues will keep their labels.'
+            ? 'Unidentified students keep their labels and block updating all joined PL students.'
             : '',
         error: matching.errors.length > 0,
       });

@@ -13,7 +13,7 @@ Automated tests do not establish compatibility with an authenticated PrairieLear
 Use a disposable course instance or authorized test roster.
 
 1. Load `dist/` in Chrome. Open Students and Student labels in turn; click the toolbar icon and confirm the course, site, and roster.
-2. Import a small CSV with multiple sections, an unmatched student, and a leading-zero UIN. Review mappings and both update scopes.
+2. Import a small CSV with multiple sections, an unmatched student, the Canvas Test Student, and a leading-zero UIN. Review mappings and both update scopes.
 3. Confirm Apply requires approval when deleting labels. Apply a small plan and check memberships, unrelated labels, and preserved students in PrairieLearn. A fresh import should show no further changes.
 4. Navigate or close the source tab after preview; confirm execution stops. Change labels in another window; confirm stale plans are rejected.
 5. Stop during a sync, then reimport and finish the remaining changes. Close and reopen the panel during a sync and check the recovery reminder.

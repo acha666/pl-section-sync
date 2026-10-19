@@ -50,7 +50,7 @@ test('matching uses only SIS Login ID and UIN without numeric conversion', () =>
   const g = readGradebook(csv('One,10,001,New\nOther,20,1,New'));
   const m = matchStudents(g, snapshot().roster);
   assert.equal(m.matches.length, 1);
-  assert.equal(m.issues.length, 1);
+  assert.deepEqual(m.notes, ['Other (1): not found in PrairieLearn.']);
 });
 test('duplicate Canvas student rows merge section sets', () => {
   const m = matchStudents(
@@ -68,7 +68,7 @@ test('duplicate identity conflicts block execution', () => {
   assert.ok(matchStudents(readGradebook(csv('One,10,001,A\nOne,10,002,A')), roster).errors.length);
   assert.ok(matchStudents(gradebook(), [...roster, { ...roster[0], id: '4' }]).errors.length);
 });
-test('left, unmatched, missing SIS, and empty sections are preserved as issues', () => {
+test('only unidentified students are issues; left, unmatched, and empty sections are notes', () => {
   const m = matchStudents(
     readGradebook(
       csv('One,10,001,A\nLeft,30,003,A\nUnknown,40,004,A\nMissing,50,,A\nBlank,20,002,'),
@@ -76,12 +76,27 @@ test('left, unmatched, missing SIS, and empty sections are preserved as issues',
     snapshot().roster,
   );
   assert.equal(m.matches.length, 1);
-  assert.equal(m.issues.length, 4);
+  assert.deepEqual(m.issues, ['Missing: missing SIS Login ID.']);
+  assert.equal(m.notes.length, 3);
+  assert.deepEqual(m.preserved, ['2']);
+});
+test('the Canvas test student is ignored unless it matches an enrollment', () => {
+  const m = matchStudents(
+    readGradebook(csv('"Student, Test",10,001,A\nTest Student,50,,A\nTest Student,60,ab12,A')),
+    snapshot().roster,
+  );
+  assert.deepEqual(
+    m.matches.map((x) => x.student.id),
+    ['1'],
+  );
+  assert.deepEqual(m.issues, []);
+  assert.equal(m.notes.length, 2);
 });
 test('partial import preserves outside and non-joined memberships and other labels', () => {
   const s = snapshot();
   const p = createPlan(s, matchStudents(gradebook(), s.roster), mapping());
   assert.deepEqual(p.changes.find((c) => c.id === '11').target, ['2', '3']);
+  assert.deepEqual(p.absent, []);
   assert.equal(
     p.changes.some((c) => c.id === '12'),
     false,
@@ -96,6 +111,30 @@ test('full replacement removes only joined students outside import', () => {
   const s = snapshot();
   const p = createPlan(s, matchStudents(gradebook(), s.roster), mapping(), { replace: true });
   assert.deepEqual(p.changes.find((c) => c.id === '11').target, ['3']);
+  assert.deepEqual(p.absent, ['2']);
+});
+test('full replacement allows students outside PrairieLearn, non-joined, and test students', () => {
+  const s = snapshot();
+  const m = matchStudents(
+    readGradebook(csv('One,10,001,New\nLeft,30,003,A\nGhost,40,004,A\n"Student, Test",50,,A')),
+    s.roster,
+  );
+  const p = createPlan(s, m, mapping(), { replace: true });
+  assert.deepEqual(p.changes.find((c) => c.id === '11').target, ['3']);
+  assert.deepEqual(p.absent, ['2']);
+});
+test('full replacement preserves joined students missing a Section', () => {
+  const s = snapshot();
+  const m = matchStudents(readGradebook(csv('One,10,001,New\nTwo,20,002,')), s.roster);
+  const p = createPlan(s, m, mapping(), { replace: true });
+  assert.deepEqual(p.changes.find((c) => c.id === '11').target, ['2', '3']);
+  assert.deepEqual(p.absent, []);
+});
+test('absent students without section labels are not reported', () => {
+  const s = snapshot();
+  s.labels[0].members = ['1', '3'];
+  const p = createPlan(s, matchStudents(gradebook(), s.roster), mapping(), { replace: true });
+  assert.deepEqual(p.absent, []);
 });
 test('full replacement rejects unresolved import issues', () => {
   const s = snapshot(),

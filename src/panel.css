@@ -202,9 +202,13 @@ summary {
   cursor: pointer;
 }
 .scroll-list,
-.change ul {
+.change ul,
+#absent ul {
   max-height: 240px;
   overflow: auto;
+}
+#absent {
+  overflow-wrap: anywhere;
 }
 .row,
 .change {

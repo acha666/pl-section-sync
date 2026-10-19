@@ -110,3 +110,31 @@ test('errors stay visible after scrolling, and Enter applies a regex rule', asyn
   await expect(page.locator('#notice')).toContainText('1–255 characters');
   await expect(page.locator('#notice')).toBeInViewport();
 });
+
+test('students outside PrairieLearn allow full replacement; unidentified ones block it', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.locator('#csv')).toBeEnabled();
+  const load = (rows) =>
+    page.locator('#csv').setInputFiles({
+      name: 'ghosts.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(`Student,ID,SIS Login ID,Section\nOne,10,001,A\n${rows}`),
+    });
+  const replace = page.locator('#scope option[value="replace"]');
+  await load('Missing,40,,A');
+  await expect(replace).toBeDisabled();
+  await expect(replace).toHaveText('All joined PL students (1 unidentified student in CSV)');
+  await expect(page.getByText('Missing: missing SIS Login ID.')).toBeVisible();
+  await load('Ghost,40,004,A\nLeft,30,003,A\n"Student, Test",50,,A');
+  await expect(page.getByText('3 students not updated')).toBeVisible();
+  await expect(replace).toBeEnabled();
+  await page.locator('#scope').selectOption('replace');
+  await page.locator('#preview').click();
+  await expect(page.locator('#absent')).toContainText(
+    '1 joined student absent from this CSV will lose section labels.',
+  );
+  await page.locator('#absent summary').click();
+  await expect(page.locator('#absent li')).toHaveText('Student Two · 002');
+});
