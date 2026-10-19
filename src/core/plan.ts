@@ -36,9 +36,7 @@ export function createPlan(
       for (const suffix of mapping.get(section)!) {
         const name = `${LABEL_PREFIX}${suffix.trim()}`;
         requireValue(
-          suffix.trim() &&
-            name.length <= 255 &&
-            ![...name].some((character) => character.charCodeAt(0) < 32),
+          suffix.trim() && name.length <= 255 && !/\p{Cc}/u.test(name),
           'Label names must be 1–255 characters without control characters.',
         );
         const k = key(name);
@@ -47,7 +45,7 @@ export function createPlan(
       }
     }
   const changes: Change[] = [];
-  for (const k of new Set([...existing.keys(), ...desired.keys()])) {
+  for (const k of sorted(new Set([...existing.keys(), ...desired.keys()]))) {
     const current = existing.get(k),
       want = desired.get(k);
     const members = new Set(current?.members ?? []);

@@ -79,6 +79,10 @@ test('partial import preserves outside and non-joined memberships and other labe
     false,
   );
   assert.deepEqual(p.summary, { create: 1, destroy: 1, add: 1, remove: 1 });
+  assert.deepEqual(
+    p.changes.map((c) => c.name),
+    ['section Empty', 'Section New', 'Section Old'],
+  );
 });
 test('full replacement removes only joined students outside import', () => {
   const s = snapshot();
@@ -112,6 +116,7 @@ test('limits and cleanup preference are enforced', () => {
     m = matchStudents(gradebook(), s.roster);
   assert.equal(createPlan(s, m, mapping(), { cleanup: false }).summary.destroy, 0);
   assert.throws(() => createPlan(s, m, new Map([['New', ['x'.repeat(255)]]])), /255/);
+  assert.throws(() => createPlan(s, m, new Map([['New', ['a\u0085b']]])), /control/);
   for (let i = s.labels.length; i < 100; i++)
     s.labels.push({ id: `x${i}`, name: `Other ${i}`, members: [], color: 'blue1', uuid: `x${i}` });
   assert.throws(() => createPlan(s, m, mapping()), /100-label/);

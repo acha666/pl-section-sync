@@ -70,20 +70,19 @@ function checkResult(value: unknown, op: Operation) {
       typeof result.origHash === 'string' && !result.enrollmentWarning,
       'PrairieLearn returned a definition warning or an unsupported result.',
     );
-  } else {
-    const changed = op.type === 'add' ? 'added' : 'removed';
-    const unchanged = op.type === 'add' ? 'alreadyHaveLabel' : 'didNotHaveLabel';
-    requireValue(
-      [changed, unchanged, 'notFound'].every(
-        (k) => typeof result[k] === 'number' && Number.isInteger(result[k]) && result[k] >= 0,
-      ) &&
-        result.notFound === 0 &&
-        typeof result[changed] === 'number' &&
-        typeof result[unchanged] === 'number' &&
-        result[changed] + result[unchanged] === op.ids.length,
-      'PrairieLearn did not account for every requested student.',
-    );
+    return;
   }
+  // Invalid counts become NaN, which fails every comparison below.
+  const count = (name: string) => {
+    const n = result[name];
+    return typeof n === 'number' && Number.isInteger(n) && n >= 0 ? n : NaN;
+  };
+  const [changed, unchanged] =
+    op.type === 'add' ? ['added', 'alreadyHaveLabel'] : ['removed', 'didNotHaveLabel'];
+  requireValue(
+    count('notFound') === 0 && count(changed) + count(unchanged) === op.ids.length,
+    'PrairieLearn did not account for every requested student.',
+  );
 }
 /** Serial writes; every mutation is followed by a complete state check. No blind retries. */
 export async function execute(
@@ -137,9 +136,9 @@ export async function execute(
     } catch (error) {
       failure = error;
     }
+    if (failure && !(failure instanceof RequestError && failure.uncertain)) throw failure;
     // A lost response can follow a successful write. Read once, without resending.
     const after = await client.read();
-    if (failure && !(failure instanceof RequestError && failure.uncertain)) throw failure;
     try {
       expectedAfter(before, after, op);
     } catch (error) {
