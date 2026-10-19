@@ -17,7 +17,14 @@ test('CSV preserves leading zeros, BOM, commas, escaped quotes, and multiline te
   ]);
 });
 test('CSV rejects malformed quoting and incomplete records', () => {
-  for (const text of ['"abc', 'ab"c', '"a"b']) assert.throws(() => parseCsv(text), /CSV/);
+  for (const text of ['"abc', '"a"b']) assert.throws(() => parseCsv(text), /CSV/);
+  // A quote inside an unquoted field cannot shift columns, so it is kept as text.
+  assert.deepEqual(parseCsv('ab"c'), [['ab"c']]);
+  assert.deepEqual(parseCsv('A,B\r\n1,2\n3,4\r,\r\n'), [
+    ['A', 'B'],
+    ['1', '2'],
+    ['3', '4'],
+  ]);
   assert.throws(() => readGradebook(csv('One,10,001')), /fields/);
 });
 test('required headers and duplicate headers are checked', () => {

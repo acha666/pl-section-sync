@@ -1,48 +1,17 @@
+import Papa from 'papaparse';
 import type { Gradebook, GradebookRecord } from './types.js';
 import { MAX_CSV_BYTES, requireValue } from './model.js';
 
-/** Strict RFC 4180 reader. No type coercion or formula evaluation. */
+/** RFC 4180 records as text. No type coercion or formula evaluation. */
 export function parseCsv(text: string): string[][] {
   requireValue(text.length <= MAX_CSV_BYTES, 'CSV is larger than the 20 MB limit.');
-  text = text.replace(/^\uFEFF/, '');
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = '',
-    quoted = false,
-    closed = false;
-  const cell = () => {
-    row.push(field);
-    field = '';
-    closed = false;
-  };
-  const line = () => {
-    cell();
-    if (row.some((v) => v !== '')) rows.push(row);
-    row = [];
-  };
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i]!;
-    if (quoted) {
-      if (c === '"' && text[i + 1] === '"') {
-        field += '"';
-        i++;
-      } else if (c === '"') {
-        quoted = false;
-        closed = true;
-      } else field += c;
-    } else if (c === ',') cell();
-    else if (c === '\n' || c === '\r') {
-      line();
-      if (c === '\r' && text[i + 1] === '\n') i++;
-    } else if (c === '"' && field === '' && !closed) quoted = true;
-    else {
-      requireValue(!closed && c !== '"', 'Malformed CSV quoting. Export the gradebook again.');
-      field += c;
-    }
-  }
-  requireValue(!quoted, 'CSV ends inside a quoted field.');
-  if (field !== '' || row.length || closed) line();
-  return rows;
+  // Mixed line endings are accepted; outside quotes each one ends a record.
+  const { data, errors } = Papa.parse<string[]>(
+    text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n'),
+    { delimiter: ',', newline: '\n', skipEmptyLines: 'greedy' },
+  );
+  requireValue(!errors.length, `Malformed CSV: ${errors[0]?.message}. Export the gradebook again.`);
+  return data;
 }
 export function readGradebook(text: string): Gradebook {
   const rows = parseCsv(text);
