@@ -65,3 +65,22 @@ export function fakeClient(initial) {
     },
   };
 }
+/** PrairieLearn response shapes for a fake backend state (course instance 123). */
+export function wire(state) {
+  return {
+    roster: state.roster.map((s) => ({
+      enrollment: { id: s.id, course_instance_id: '123', status: s.status },
+      user: { uid: s.uid, uin: s.uin, name: s.name },
+    })),
+    labels: {
+      origHash: state.hash,
+      labels: state.labels.map(({ members, ...label }) => ({
+        student_label: label,
+        user_data: members.map((id) => ({
+          enrollment_id: id,
+          uid: state.roster.find((s) => s.id === id)?.uid ?? 'unknown',
+        })),
+      })),
+    },
+  };
+}
