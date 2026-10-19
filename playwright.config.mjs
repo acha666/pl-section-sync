@@ -8,8 +8,8 @@ export default defineConfig({
     launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH },
   },
   webServer: {
-    command: 'node scripts/dev-server.mjs --no-watch',
-    url: 'http://127.0.0.1:8080',
+    command: 'npx vite --host 127.0.0.1',
+    url: 'http://127.0.0.1:8080/panel.html',
     reuseExistingServer: false,
   },
 });

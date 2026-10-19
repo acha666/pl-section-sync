@@ -1,7 +1,7 @@
-import test, { afterEach } from 'node:test';
+import { test, afterEach } from 'vitest';
 import assert from 'node:assert/strict';
-import { pageRequest } from '../dist/src/pl/bridge.js';
-import { createClient } from '../dist/src/pl/client.js';
+import { pageRequest } from '../src/pl/bridge.ts';
+import { createClient } from '../src/pl/client.ts';
 const context = {
   origin: 'https://example.invalid',
   base: '/pl/course_instance/123/instructor',

@@ -1,4 +1,5 @@
 import { snapshot, fakeClient, wire } from '../test/fixtures.js';
+import { version } from '../package.json';
 const backend = fakeClient(snapshot());
 const target = {
   windowId: 1,
@@ -13,7 +14,7 @@ const target = {
 const store = { 'target:1': target },
   listeners = [];
 window.chrome = {
-  runtime: { getManifest: () => ({ version: window.demoVersion }) },
+  runtime: { getManifest: () => ({ version }) },
   windows: { getCurrent: async () => ({ id: 1 }) },
   storage: {
     session: {
@@ -58,4 +59,3 @@ demo.addEventListener('click', () => {
   input.files = transfer.files;
   input.dispatchEvent(new Event('change'));
 });
-await import('../src/panel.js');

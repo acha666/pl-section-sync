@@ -1,7 +1,7 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { Controller, capabilities } from '../dist/src/ui/controller.js';
-import { parseTarget } from '../dist/src/pl/parse.js';
+import { Controller, capabilities } from '../src/ui/controller.ts';
+import { parseTarget } from '../src/pl/parse.ts';
 import { fakeClient, snapshot } from './fixtures.js';
 const context = {
   tabId: 1,

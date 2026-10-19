@@ -1,9 +1,9 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { parseCsv, readGradebook, suggestSections } from '../dist/src/core/csv.js';
-import { contextFromUrl, parseRoster, parseLabels } from '../dist/src/pl/parse.js';
-import { matchStudents } from '../dist/src/core/match.js';
-import { createPlan } from '../dist/src/core/plan.js';
+import { parseCsv, readGradebook, suggestSections } from '../src/core/csv.ts';
+import { contextFromUrl, parseRoster, parseLabels } from '../src/pl/parse.ts';
+import { matchStudents } from '../src/core/match.ts';
+import { createPlan } from '../src/core/plan.ts';
 import { snapshot } from './fixtures.js';
 const csv = (rows) => `Student,ID,SIS Login ID,Section\n${rows}`;
 const gradebook = () => readGradebook(csv('One,10,001,New'));

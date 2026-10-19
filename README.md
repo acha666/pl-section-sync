@@ -35,17 +35,17 @@ Without VS Code:
 
 Inside the container:
 
-| Command           | Purpose                                                                       |
-| ----------------- | ----------------------------------------------------------------------------- |
-| `npm run dev`     | Synthetic UI at `http://localhost:8080`; rebuilds on save, reload the browser |
-| `npm run check`   | Strict TS, ESLint, and Prettier checks                                        |
-| `npm run format`  | Format source, configuration, and documentation                               |
-| `npm test`        | Build and run unit tests                                                      |
-| `npm run test:ui` | Chromium browser tests                                                        |
-| `npm run package` | Build `dist/` and `release/pl-section-sync-<version>.zip`                     |
-| `npm run verify`  | All checks, tests, and packaging                                              |
+| Command           | Purpose                                                         |
+| ----------------- | --------------------------------------------------------------- |
+| `npm run dev`     | Synthetic UI at `http://localhost:8080` with live reload (Vite) |
+| `npm run check`   | Strict TS, ESLint, and Prettier checks                          |
+| `npm run format`  | Format source, configuration, and documentation                 |
+| `npm test`        | Build and run unit tests (Vitest)                               |
+| `npm run test:ui` | Chromium browser tests                                          |
+| `npm run package` | Build `dist/` and `release/pl-section-sync-<version>.zip`       |
+| `npm run verify`  | All checks, tests, and packaging                                |
 
-Load `dist/` in host Chrome to test the actual extension. The synthetic UI uses generated students and makes no PrairieLearn requests. Container commands write generated files using the host user's UID/GID. Dependencies are locked in `package-lock.json`.
+Load `dist/` in host Chrome to test the actual extension; `npm run build -- --watch` rebuilds it on save. The synthetic UI uses generated students and makes no PrairieLearn requests. Container commands write generated files using the host user's UID/GID. Dependencies are locked in `package-lock.json`.
 
 ## Structure
 
@@ -53,7 +53,8 @@ Load `dist/` in host Chrome to test the actual extension. The synthetic UI uses 
 - `src/pl/`: same-origin adapter, document-bound Chrome client, and response validation.
 - `src/sync/`: serial writes and state verification.
 - `src/ui/`: panel state coordinator and native DOM rendering.
-- `public/`: UI, icons, and manifest template; build injects the package version.
+- `panel.html`, `src/manifest.json`: panel entry and manifest template; the build injects the package version.
+- `public/`: icons copied unchanged.
 - `test/`: synthetic unit and browser tests.
 
 See [release workflow](docs/RELEASING.md), [adapter contract](docs/COMPATIBILITY.md), [validation](docs/VALIDATION.md), and [privacy](PRIVACY.md). Independent project; not affiliated with PrairieLearn, Canvas, or Google.

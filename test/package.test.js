@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
@@ -29,7 +29,7 @@ test('package includes only extension files and has reproducible bytes', async (
     assert.ok(files[manifest.side_panel.default_path]);
     assert.ok(
       Object.keys(files).every((path) =>
-        /^(src\/.*\.js|icons\/\d+\.png|panel\.(html|css)|manifest\.json)$/.test(path),
+        /^([\w-]+\.js|icons\/\d+\.png|panel\.(html|css)|manifest\.json)$/.test(path),
       ),
     );
     execFileSync(process.execPath, [script], { cwd: directory });

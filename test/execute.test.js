@@ -1,9 +1,9 @@
-import { RequestError } from '../dist/src/core/model.js';
-import test from 'node:test';
+import { RequestError } from '../src/core/model.ts';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { execute, operations } from '../dist/src/sync/execute.js';
-import { createPlan } from '../dist/src/core/plan.js';
-import { matchStudents } from '../dist/src/core/match.js';
+import { execute, operations } from '../src/sync/execute.ts';
+import { createPlan } from '../src/core/plan.ts';
+import { matchStudents } from '../src/core/match.ts';
 import { snapshot, fakeClient } from './fixtures.js';
 const g = { records: [{ id: '10', sis: '001', name: 'One', section: 'New' }], issues: [] };
 const mapping = new Map([['New', ['New']]]);

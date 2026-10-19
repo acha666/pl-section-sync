@@ -7,10 +7,8 @@
     "types": ["chrome"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "noEmitOnError": true,
     "verbatimModuleSyntax": true,
-    "rootDir": "src",
-    "outDir": "dist/src"
+    "noEmit": true
   },
   "include": ["src/**/*.ts"]
 }
