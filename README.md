@@ -1,6 +1,6 @@
 # PL Section Sync
 
-A Chrome side panel that matches a Canvas Gradebook CSV to PrairieLearn students and syncs section labels. TypeScript, native HTML/CSS, and no runtime dependencies or backend.
+A Chrome side panel that matches a Canvas Gradebook CSV to PrairieLearn students and syncs section labels. Built with TypeScript and Preact; everything is bundled into the extension, with no backend.
 
 ## Install and use
 
@@ -52,7 +52,7 @@ Load `dist/` in host Chrome to test the actual extension; `npm run build -- --wa
 - `src/core/`: models, CSV parsing, matching, and change planning; no PrairieLearn wire formats.
 - `src/pl/`: same-origin adapter, document-bound Chrome client, and response validation.
 - `src/sync/`: serial writes and state verification.
-- `src/ui/`: panel state coordinator and native DOM rendering.
+- `src/ui/`: panel state coordinator and Preact components.
 - `panel.html`, `src/manifest.json`: panel entry and manifest template; the build injects the package version.
 - `public/`: icons copied unchanged.
 - `test/`: synthetic unit and browser tests.

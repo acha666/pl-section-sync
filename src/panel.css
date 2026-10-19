@@ -202,8 +202,7 @@ summary {
   cursor: pointer;
 }
 .scroll-list,
-.change ul,
-#log {
+.change ul {
   max-height: 240px;
   overflow: auto;
 }

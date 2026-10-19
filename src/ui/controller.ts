@@ -80,7 +80,8 @@ const cleared = () => ({
 });
 /** Any mapping or option change requires a new preview and approval. */
 const invalidated = { phase: 'editing', plan: undefined, approved: false } as const;
-const labelList = (values: string[]) => [
+/** Trimmed, unique, non-empty label suffixes. */
+export const labelList = (values: string[]) => [
   ...new Set(values.map((value) => value.trim()).filter(Boolean)),
 ];
 const journalKey = (context: Context) => `journal:${context.origin}${context.base}`;
@@ -109,7 +110,7 @@ export class Controller {
     private changed: (state: State) => void,
   ) {}
   private update(patch: Partial<State>) {
-    Object.assign(this.state, patch);
+    this.state = { ...this.state, ...patch };
     this.changed(this.state);
   }
   report(error: unknown) {

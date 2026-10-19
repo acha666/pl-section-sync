@@ -83,13 +83,14 @@ test('regex rules clean imported labels and update the preview', async ({ page }
   await page.locator('#delete-confirm').check();
   await replace('^(\\d+)$', 'Lecture $1');
   await expect(page.locator('#review')).toBeHidden();
-  await expect(page.locator('#delete-confirm')).not.toBeChecked();
+  await expect(page.locator('#delete-confirm')).toHaveCount(0);
   await replace('^(L\\w+)$', 'Lab $1');
   await expect(field).toHaveValue('Lecture 102\nLab L1W');
   await replace('[', '');
   await expect(page.locator('#notice')).toHaveClass(/error/);
   await expect(field).toHaveValue('Lecture 102\nLab L1W');
   await page.locator('#preview').click();
+  await expect(page.locator('#delete-confirm')).not.toBeChecked();
   await expect(page.locator('#changes')).toContainText('Section Lecture 102');
   await expect(page.locator('#changes')).toContainText('Section Lab L1W');
 });

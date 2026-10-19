@@ -1,11 +1,12 @@
+import { render } from 'preact';
 import { createClient } from './pl/client.js';
 import { parseTarget } from './pl/parse.js';
 import { Controller } from './ui/controller.js';
-import { createView } from './ui/view.js';
-import type { State } from './ui/controller.js';
+import { Panel } from './ui/view.js';
+import './panel.css';
 
-let render: (state: State) => void = () => {};
-const controller = new Controller(
+const root = document.getElementById('app')!;
+const controller: Controller = new Controller(
   {
     client: createClient,
     storage: chrome.storage.session,
@@ -17,12 +18,9 @@ const controller = new Controller(
       });
     },
   },
-  (state) => render(state),
+  (state) => render(<Panel controller={controller} state={state} />, root),
 );
-render = createView(controller);
-render(controller.state);
-const version = document.getElementById('version');
-if (version) version.textContent = `Version ${chrome.runtime.getManifest().version}`;
+render(<Panel controller={controller} state={controller.state} />, root);
 try {
   const windowId = (await chrome.windows.getCurrent()).id;
   if (windowId === undefined) throw new Error('The browser window is unavailable.');

@@ -43,6 +43,7 @@ export default defineConfig({
   // Extension pages load files relative to the extension root.
   base: './',
   plugins: [manifest(), demo()],
+  oxc: { jsx: { runtime: 'automatic', importSource: 'preact' } },
   build: {
     target: 'chrome116',
     // Readable output for Chrome Web Store review; size is irrelevant for a local extension.
