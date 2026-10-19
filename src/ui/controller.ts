@@ -1,7 +1,7 @@
 import { readGradebook, suggestSections } from '../core/csv.js';
 import { matchStudents } from '../core/match.js';
 import { createPlan } from '../core/plan.js';
-import { message, object, requireValue, string } from '../core/model.js';
+import { message, requireValue } from '../core/model.js';
 import { execute } from '../sync/execute.js';
 import type {
   Client,
@@ -47,25 +47,6 @@ export interface Services {
   client(context: Context): Client;
   journal(key: string, value?: Progress | true | null): Promise<unknown>;
   lock(task: () => Promise<void>): Promise<boolean>;
-}
-export function parseTarget(value: unknown, windowId: number): Target {
-  const data = object(value);
-  requireValue(data.windowId === windowId, 'Invalid source window.');
-  const identity = { windowId, nonce: string(data.nonce) };
-  if ('error' in data) return { ...identity, error: string(data.error) };
-  const c = object(data.context);
-  requireValue(typeof c.tabId === 'number' && Number.isInteger(c.tabId), 'Invalid source tab.');
-  const origin = string(c.origin),
-    base = string(c.base),
-    courseId = string(c.courseId);
-  requireValue(
-    /^https?:$/.test(new URL(origin).protocol) &&
-      new URL(origin).origin === origin &&
-      /^.*\/course_instance\/\d+\/instructor$/.test(base) &&
-      base.endsWith(`/course_instance/${courseId}/instructor`),
-    'Invalid source course.',
-  );
-  return { ...identity, context: { tabId: c.tabId, origin, base, courseId } };
 }
 export function capabilities(state: State) {
   const editable = state.phase === 'editing' || state.phase === 'preview';

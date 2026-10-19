@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseCsv, readGradebook, suggestSections } from '../dist/src/core/csv.js';
-import { contextFromUrl, parseRoster, parseLabels } from '../dist/src/core/model.js';
+import { contextFromUrl, parseRoster, parseLabels } from '../dist/src/pl/parse.js';
 import { matchStudents } from '../dist/src/core/match.js';
 import { createPlan } from '../dist/src/core/plan.js';
 import { snapshot } from './fixtures.js';

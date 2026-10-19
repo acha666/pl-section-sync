@@ -1,5 +1,6 @@
-import { contextFromUrl, message, requireValue } from './core/model.js';
+import { message, requireValue } from './core/model.js';
 import type { Target } from './core/types.js';
+import { contextFromUrl } from './pl/parse.js';
 
 chrome.action.onClicked.addListener((tab) => {
   const opening = chrome.sidePanel.open({ windowId: tab.windowId });

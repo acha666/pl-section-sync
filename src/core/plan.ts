@@ -1,5 +1,5 @@
 import type { Snapshot, MatchResult, Mapping, Plan, Label, Change } from './types.js';
-import { key, managed, sorted, requireValue } from './model.js';
+import { LABEL_PREFIX, key, managed, sorted, requireValue } from './model.js';
 
 export function createPlan(
   snapshot: Snapshot,
@@ -34,7 +34,7 @@ export function createPlan(
     for (const section of m.sections) {
       requireValue(mapping.has(section), `Review the section mapping for ${section}.`);
       for (const suffix of mapping.get(section)!) {
-        const name = `Section ${suffix.trim()}`;
+        const name = `${LABEL_PREFIX}${suffix.trim()}`;
         requireValue(
           suffix.trim() &&
             name.length <= 255 &&

@@ -1,12 +1,6 @@
 import { pageRequest } from './bridge.js';
-import {
-  object,
-  parseLabels,
-  parseRoster,
-  requireValue,
-  RequestError,
-  string,
-} from '../core/model.js';
+import { parseLabels, parseRoster } from './parse.js';
+import { object, requireValue, RequestError, string } from '../core/model.js';
 import type { Client, Command, Context, Reply } from '../core/types.js';
 
 export function createClient(context: Context): Client {

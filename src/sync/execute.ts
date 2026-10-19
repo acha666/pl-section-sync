@@ -1,5 +1,6 @@
 import type { Client, Mutation, Operation, Plan, Progress, Snapshot } from '../core/types.js';
 import {
+  LABEL_COLOR,
   fingerprint,
   key,
   requireValue,
@@ -38,7 +39,7 @@ function expectedAfter(before: Snapshot, after: Snapshot, op: Operation) {
       !l &&
         created &&
         created.name === op.name &&
-        created.color === 'blue1' &&
+        created.color === LABEL_COLOR &&
         !created.members.length,
       'Created label could not be verified.',
     );
@@ -109,7 +110,7 @@ export async function execute(
     if (op.type === 'create') {
       command = {
         method: 'upsert',
-        input: { name: op.name, color: 'blue1', uids: [], origHash: before.hash },
+        input: { name: op.name, color: LABEL_COLOR, uids: [], origHash: before.hash },
       };
     } else if (op.type === 'destroy') {
       requireValue(label && !label.members.length, 'The label is no longer empty.');

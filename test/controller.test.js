@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Controller, capabilities, parseTarget } from '../dist/src/ui/controller.js';
+import { Controller, capabilities } from '../dist/src/ui/controller.js';
+import { parseTarget } from '../dist/src/pl/parse.js';
 import { fakeClient, snapshot } from './fixtures.js';
 const context = {
   tabId: 1,
@@ -154,6 +155,12 @@ test('target validation rejects wrong window and malformed course context', () =
     parseTarget({ ...target(), context: { ...context, origin: 'javascript:alert(1)' } }, 1),
   );
   assert.throws(() => parseTarget({ ...target(), context: { ...context, courseId: '456' } }, 1));
+  assert.throws(() =>
+    parseTarget(
+      { ...target(), context: { ...context, base: '/pl/../course_instance/123/instructor' } },
+      1,
+    ),
+  );
 });
 
 test('regex replacement preserves invalid input, deduplicates, and invalidates approval', async () => {

@@ -1,9 +1,9 @@
 import type { Gradebook, GradebookRecord } from './types.js';
-import { requireValue } from './model.js';
+import { MAX_CSV_BYTES, requireValue } from './model.js';
 
 /** Strict RFC 4180 reader. No type coercion or formula evaluation. */
 export function parseCsv(text: string): string[][] {
-  requireValue(text.length <= 20 * 1024 * 1024, 'CSV is larger than the 20 MB limit.');
+  requireValue(text.length <= MAX_CSV_BYTES, 'CSV is larger than the 20 MB limit.');
   text = text.replace(/^\uFEFF/, '');
   const rows: string[][] = [];
   let row: string[] = [];

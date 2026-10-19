@@ -1,5 +1,6 @@
 import { createClient } from './pl/client.js';
-import { Controller, parseTarget } from './ui/controller.js';
+import { parseTarget } from './pl/parse.js';
+import { Controller } from './ui/controller.js';
 import { createView } from './ui/view.js';
 import type { State } from './ui/controller.js';
 
