@@ -1,84 +1,110 @@
-import { object, requireValue, sorted, string } from '../core/model.js';
-import type { Context, Label, Student, Target } from '../core/types.js';
+import { z } from 'zod';
+import { contextFromUrl } from './context.js';
+import { requireValue, sorted } from '../core/model.js';
+import type { Label, Snapshot, Student, Target } from '../core/types.js';
 
-/** Validates PrairieLearn URLs and response shapes before they reach the core model. */
-export function contextFromUrl(value: string, tabId: number): Context {
-  const url = new URL(value);
-  const match = url.pathname.match(
-    /^(.*\/course_instance\/(\d+)\/instructor)\/instance_admin\/students(?:\/labels)?\/?$/,
-  );
-  requireValue(
-    ['https:', 'http:'].includes(url.protocol) && match,
-    'Open a PrairieLearn Students or Student labels page, then click the extension icon.',
-  );
-  return { tabId, origin: url.origin, base: match[1]!, courseId: match[2]! };
+// Validates PrairieLearn responses and panel messages before they reach the core model.
+
+/** Parses untrusted data, reporting a fixed message rather than schema details. */
+function check<S extends z.ZodType>(schema: S, value: unknown, message: string): z.output<S> {
+  const result = schema.safeParse(value);
+  requireValue(result.success, message);
+  return result.data;
 }
+const unique = (values: string[]) => new Set(values).size === values.length;
+
+const TargetMessage = z.object({
+  windowId: z.number(),
+  nonce: z.string(),
+  error: z.string().optional(),
+  context: z
+    .object({ tabId: z.int(), origin: z.string(), base: z.string(), courseId: z.string() })
+    .optional(),
+});
 export function parseTarget(value: unknown, windowId: number): Target {
-  const data = object(value);
+  const data = check(TargetMessage, value, 'Invalid source target.');
   requireValue(data.windowId === windowId, 'Invalid source window.');
-  const identity = { windowId, nonce: string(data.nonce) };
-  if ('error' in data) return { ...identity, error: string(data.error) };
-  const c = object(data.context);
-  requireValue(typeof c.tabId === 'number' && Number.isInteger(c.tabId), 'Invalid source tab.');
-  const origin = string(c.origin),
-    base = string(c.base),
-    courseId = string(c.courseId);
-  const context = contextFromUrl(`${origin}${base}/instance_admin/students`, c.tabId);
+  const identity = { windowId, nonce: data.nonce };
+  if (data.error !== undefined) return { ...identity, error: data.error };
+  requireValue(data.context, 'Invalid source course.');
+  const { tabId, origin, base, courseId } = data.context;
+  const context = contextFromUrl(`${origin}${base}/instance_admin/students`, tabId);
   requireValue(
     context.origin === origin && context.base === base && context.courseId === courseId,
     'Invalid source course.',
   );
   return { ...identity, context };
 }
+
+const Roster = z.array(
+  z.object({
+    enrollment: z.object({
+      id: z.string(),
+      course_instance_id: z.string(),
+      status: z.string(),
+      pending_name: z.string().nullish(),
+    }),
+    user: z
+      .object({ uid: z.string(), uin: z.string().nullish(), name: z.string().nullish() })
+      .nullish(),
+  }),
+);
 export function parseRoster(data: unknown, courseId: string): Student[] {
-  requireValue(Array.isArray(data), 'Unsupported PrairieLearn student response.');
-  const ids = new Set<string>();
-  return data.map((value: unknown) => {
-    const row = object(value),
-      e = object(row.enrollment);
-    const id = string(e.id);
-    requireValue(
-      e.course_instance_id === courseId && !ids.has(id),
-      'Invalid or duplicate PrairieLearn enrollment.',
-    );
-    ids.add(id);
-    const u = row.user == null ? undefined : object(row.user);
-    return {
-      id,
-      uid: u ? string(u.uid) : '',
-      uin: string(u?.uin ?? '').trim(),
-      name: string(u?.name ?? e.pending_name ?? ''),
-      status: string(e.status),
-    };
-  });
+  const rows = check(Roster, data, 'Unsupported PrairieLearn student response.');
+  requireValue(
+    rows.every((row) => row.enrollment.course_instance_id === courseId) &&
+      unique(rows.map((row) => row.enrollment.id)),
+    'Invalid or duplicate PrairieLearn enrollment.',
+  );
+  return rows.map(({ enrollment: e, user: u }) => ({
+    id: e.id,
+    uid: u?.uid ?? '',
+    uin: u?.uin?.trim() ?? '',
+    name: u?.name ?? e.pending_name ?? '',
+    status: e.status,
+  }));
 }
+
+const LabelList = z.object({
+  origHash: z.string(),
+  labels: z.array(
+    z.object({
+      student_label: z.object({
+        id: z.string(),
+        name: z.string(),
+        color: z.string(),
+        uuid: z.string(),
+      }),
+      user_data: z.array(z.object({ uid: z.string(), enrollment_id: z.string() })),
+    }),
+  ),
+});
 export function parseLabels(value: unknown): { labels: Label[]; hash: string } {
-  const data = object(value),
-    hash = string(data.origHash);
-  requireValue(Array.isArray(data.labels), 'Unsupported PrairieLearn label response.');
-  const ids = new Set<string>();
-  const labels = data.labels.map((value: unknown) => {
-    const row = object(value),
-      l = object(row.student_label),
-      id = string(l.id);
-    requireValue(
-      Array.isArray(row.user_data) && !ids.has(id),
-      'Invalid PrairieLearn label definition.',
-    );
-    ids.add(id);
-    const members = row.user_data.map((value: unknown) => {
-      const u = object(value);
-      string(u.uid);
-      return string(u.enrollment_id);
-    });
-    requireValue(new Set(members).size === members.length, 'Duplicate label membership.');
-    return {
-      id,
-      name: string(l.name),
-      color: string(l.color),
-      uuid: string(l.uuid),
-      members: sorted(members),
-    };
-  });
-  return { labels, hash };
+  const data = check(LabelList, value, 'Unsupported PrairieLearn label response.');
+  const labels = data.labels.map(({ student_label, user_data }) => ({
+    ...student_label,
+    members: sorted(user_data.map((u) => u.enrollment_id)),
+  }));
+  requireValue(
+    unique(labels.map((l) => l.id)) && labels.every((l) => unique(l.members)),
+    'Invalid PrairieLearn label definition or duplicate membership.',
+  );
+  return { labels, hash: data.origHash };
+}
+
+const PageData = z.object({
+  roster: z.unknown(),
+  labels: z.unknown(),
+  title: z.string(),
+  canEdit: z.boolean(),
+});
+/** Converts the adapter's read reply into a snapshot of the course. */
+export function parseSnapshot(value: unknown, courseId: string): Snapshot {
+  const data = check(PageData, value, 'Unsupported PrairieLearn page data.');
+  return {
+    roster: parseRoster(data.roster, courseId),
+    ...parseLabels(data.labels),
+    title: data.title,
+    canEdit: data.canEdit,
+  };
 }

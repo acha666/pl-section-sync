@@ -7,17 +7,6 @@ export const MAX_CSV_BYTES = 20 * 1024 * 1024;
 export function requireValue(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
-export function object(value: unknown): Record<string, unknown> {
-  requireValue(
-    value !== null && typeof value === 'object' && !Array.isArray(value),
-    'Unsupported response object.',
-  );
-  return value as Record<string, unknown>;
-}
-export function string(value: unknown): string {
-  requireValue(typeof value === 'string', 'Unsupported text value.');
-  return value;
-}
 export const message = (error: unknown): string =>
   error instanceof Error ? error.message : 'Unexpected error.';
 export class RequestError extends Error {

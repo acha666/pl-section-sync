@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { Client, Mutation, Operation, Plan, Progress, Snapshot } from '../core/types.js';
 import {
   LABEL_COLOR,
@@ -5,7 +6,6 @@ import {
   key,
   requireValue,
   sorted,
-  object,
   message,
   RequestError,
 } from '../core/model.js';
@@ -63,24 +63,30 @@ function expectedAfter(before: Snapshot, after: Snapshot, op: Operation) {
     'Server state differs from the expected change. Some work may be complete. Import again to review the remaining differences.',
   );
 }
+const count = z.int().min(0);
+const DefinitionReply = z.object({
+  origHash: z.string(),
+  enrollmentWarning: z.unknown().optional(),
+});
+// Each reply must account for every requested student, with none missing.
+const AddReply = z
+  .object({ added: count, alreadyHaveLabel: count, notFound: z.literal(0) })
+  .transform((r) => r.added + r.alreadyHaveLabel);
+const RemoveReply = z
+  .object({ removed: count, didNotHaveLabel: count, notFound: z.literal(0) })
+  .transform((r) => r.removed + r.didNotHaveLabel);
 function checkResult(value: unknown, op: Operation) {
-  const result = object(value);
   if (op.type === 'create' || op.type === 'destroy') {
+    const reply = DefinitionReply.safeParse(value);
     requireValue(
-      typeof result.origHash === 'string' && !result.enrollmentWarning,
+      reply.success && !reply.data.enrollmentWarning,
       'PrairieLearn returned a definition warning or an unsupported result.',
     );
     return;
   }
-  // Invalid counts become NaN, which fails every comparison below.
-  const count = (name: string) => {
-    const n = result[name];
-    return typeof n === 'number' && Number.isInteger(n) && n >= 0 ? n : NaN;
-  };
-  const [changed, unchanged] =
-    op.type === 'add' ? ['added', 'alreadyHaveLabel'] : ['removed', 'didNotHaveLabel'];
+  const accounted = (op.type === 'add' ? AddReply : RemoveReply).safeParse(value);
   requireValue(
-    count('notFound') === 0 && count(changed) + count(unchanged) === op.ids.length,
+    accounted.success && accounted.data === op.ids.length,
     'PrairieLearn did not account for every requested student.',
   );
 }

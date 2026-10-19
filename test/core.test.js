@@ -1,7 +1,8 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { parseCsv, readGradebook, suggestSections } from '../src/core/csv.ts';
-import { contextFromUrl, parseRoster, parseLabels } from '../src/pl/parse.ts';
+import { contextFromUrl } from '../src/pl/context.ts';
+import { parseRoster, parseLabels } from '../src/pl/parse.ts';
 import { matchStudents } from '../src/core/match.ts';
 import { createPlan } from '../src/core/plan.ts';
 import { snapshot } from './fixtures.js';

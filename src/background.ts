@@ -1,6 +1,6 @@
 import { message, requireValue } from './core/model.js';
 import type { Target } from './core/types.js';
-import { contextFromUrl } from './pl/parse.js';
+import { contextFromUrl } from './pl/context.js';
 
 chrome.action.onClicked.addListener((tab) => {
   // sidePanel.open must be called synchronously within the user gesture.
