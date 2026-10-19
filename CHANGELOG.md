@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.2.0 (2026-10-19)
+
 - Keep status and error messages visible while scrolling the panel.
 - Follow the browser's dark theme.
 - Show section labels as their own step, with the number of students per Canvas section.
