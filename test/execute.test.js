@@ -1,9 +1,9 @@
-import { RequestError } from '../dist/src/core/model.js';
-import test from 'node:test';
+import { RequestError } from '../src/core/model.ts';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { execute, operations } from '../dist/src/sync/execute.js';
-import { createPlan } from '../dist/src/core/plan.js';
-import { matchStudents } from '../dist/src/core/match.js';
+import { execute, operations } from '../src/sync/execute.ts';
+import { createPlan } from '../src/core/plan.ts';
+import { matchStudents } from '../src/core/match.ts';
 import { snapshot, fakeClient } from './fixtures.js';
 const g = { records: [{ id: '10', sis: '001', name: 'One', section: 'New' }], issues: [] };
 const mapping = new Map([['New', ['New']]]);
@@ -15,7 +15,16 @@ function setup() {
 }
 test('complete sync orders creates, adds, removes, deletes and is idempotent', async () => {
   const { s, client, matching, plan } = setup();
-  const result = await execute(client, s, plan);
+  const events = [];
+  const result = await execute(client, s, plan, {
+    onProgress: (p) => events.push(`${p.phase} ${p.completed}/${p.total} ${p.operation.type}`),
+  });
+  assert.deepEqual(events.slice(0, 3), [
+    'sending 0/4 create',
+    'verified 1/4 create',
+    'sending 1/4 add',
+  ]);
+  assert.equal(events.at(-1), 'verified 4/4 destroy');
   assert.deepEqual(
     client.calls.map((c) => c.method),
     ['upsert', 'batchAdd', 'batchRemove', 'destroy'],

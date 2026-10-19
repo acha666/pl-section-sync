@@ -1,10 +1,11 @@
+import { z } from 'zod';
 import type { Client, Mutation, Operation, Plan, Progress, Snapshot } from '../core/types.js';
 import {
+  LABEL_COLOR,
   fingerprint,
   key,
   requireValue,
   sorted,
-  object,
   message,
   RequestError,
 } from '../core/model.js';
@@ -38,7 +39,7 @@ function expectedAfter(before: Snapshot, after: Snapshot, op: Operation) {
       !l &&
         created &&
         created.name === op.name &&
-        created.color === 'blue1' &&
+        created.color === LABEL_COLOR &&
         !created.members.length,
       'Created label could not be verified.',
     );
@@ -62,27 +63,32 @@ function expectedAfter(before: Snapshot, after: Snapshot, op: Operation) {
     'Server state differs from the expected change. Some work may be complete. Import again to review the remaining differences.',
   );
 }
+const count = z.int().min(0);
+const DefinitionReply = z.object({
+  origHash: z.string(),
+  enrollmentWarning: z.unknown().optional(),
+});
+// Each reply must account for every requested student, with none missing.
+const AddReply = z
+  .object({ added: count, alreadyHaveLabel: count, notFound: z.literal(0) })
+  .transform((r) => r.added + r.alreadyHaveLabel);
+const RemoveReply = z
+  .object({ removed: count, didNotHaveLabel: count, notFound: z.literal(0) })
+  .transform((r) => r.removed + r.didNotHaveLabel);
 function checkResult(value: unknown, op: Operation) {
-  const result = object(value);
   if (op.type === 'create' || op.type === 'destroy') {
+    const reply = DefinitionReply.safeParse(value);
     requireValue(
-      typeof result.origHash === 'string' && !result.enrollmentWarning,
+      reply.success && !reply.data.enrollmentWarning,
       'PrairieLearn returned a definition warning or an unsupported result.',
     );
-  } else {
-    const changed = op.type === 'add' ? 'added' : 'removed';
-    const unchanged = op.type === 'add' ? 'alreadyHaveLabel' : 'didNotHaveLabel';
-    requireValue(
-      [changed, unchanged, 'notFound'].every(
-        (k) => typeof result[k] === 'number' && Number.isInteger(result[k]) && result[k] >= 0,
-      ) &&
-        result.notFound === 0 &&
-        typeof result[changed] === 'number' &&
-        typeof result[unchanged] === 'number' &&
-        result[changed] + result[unchanged] === op.ids.length,
-      'PrairieLearn did not account for every requested student.',
-    );
+    return;
   }
+  const accounted = (op.type === 'add' ? AddReply : RemoveReply).safeParse(value);
+  requireValue(
+    accounted.success && accounted.data === op.ids.length,
+    'PrairieLearn did not account for every requested student.',
+  );
 }
 /** Serial writes; every mutation is followed by a complete state check. No blind retries. */
 export async function execute(
@@ -109,7 +115,7 @@ export async function execute(
     if (op.type === 'create') {
       command = {
         method: 'upsert',
-        input: { name: op.name, color: 'blue1', uids: [], origHash: before.hash },
+        input: { name: op.name, color: LABEL_COLOR, uids: [], origHash: before.hash },
       };
     } else if (op.type === 'destroy') {
       requireValue(label && !label.members.length, 'The label is no longer empty.');
@@ -122,13 +128,7 @@ export async function execute(
       };
     }
     signal?.throwIfAborted();
-    await onProgress({
-      phase: 'sending',
-      index,
-      total: queue.length,
-      type: op.type,
-      name: op.name,
-    });
+    await onProgress({ phase: 'sending', completed: index, total: queue.length, operation: op });
     signal?.throwIfAborted();
     let result: unknown, failure: unknown;
     try {
@@ -136,9 +136,9 @@ export async function execute(
     } catch (error) {
       failure = error;
     }
+    if (failure && !(failure instanceof RequestError && failure.uncertain)) throw failure;
     // A lost response can follow a successful write. Read once, without resending.
     const after = await client.read();
-    if (failure && !(failure instanceof RequestError && failure.uncertain)) throw failure;
     try {
       expectedAfter(before, after, op);
     } catch (error) {
@@ -150,10 +150,9 @@ export async function execute(
     expected = after;
     await onProgress({
       phase: 'verified',
-      index: index + 1,
+      completed: index + 1,
       total: queue.length,
-      type: op.type,
-      name: op.name,
+      operation: op,
     });
   }
   const final = await client.read();

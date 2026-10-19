@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { strToU8, zipSync } from 'fflate';
 import { upload } from '../scripts/store-upload.mjs';

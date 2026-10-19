@@ -1,5 +1,5 @@
 import type { Snapshot, MatchResult, Mapping, Plan, Label, Change } from './types.js';
-import { key, managed, sorted, requireValue } from './model.js';
+import { LABEL_PREFIX, key, managed, sorted, requireValue } from './model.js';
 
 export function createPlan(
   snapshot: Snapshot,
@@ -34,11 +34,9 @@ export function createPlan(
     for (const section of m.sections) {
       requireValue(mapping.has(section), `Review the section mapping for ${section}.`);
       for (const suffix of mapping.get(section)!) {
-        const name = `Section ${suffix.trim()}`;
+        const name = `${LABEL_PREFIX}${suffix.trim()}`;
         requireValue(
-          suffix.trim() &&
-            name.length <= 255 &&
-            ![...name].some((character) => character.charCodeAt(0) < 32),
+          suffix.trim() && name.length <= 255 && !/\p{Cc}/u.test(name),
           'Label names must be 1–255 characters without control characters.',
         );
         const k = key(name);
@@ -47,7 +45,7 @@ export function createPlan(
       }
     }
   const changes: Change[] = [];
-  for (const k of new Set([...existing.keys(), ...desired.keys()])) {
+  for (const k of sorted(new Set([...existing.keys(), ...desired.keys()]))) {
     const current = existing.get(k),
       want = desired.get(k);
     const members = new Set(current?.members ?? []);

@@ -1,4 +1,5 @@
-import { snapshot, fakeClient } from '../test/fixtures.js';
+import { snapshot, fakeClient, wire } from '../test/fixtures.js';
+import { version } from '../package.json';
 const backend = fakeClient(snapshot());
 const target = {
   windowId: 1,
@@ -13,7 +14,7 @@ const target = {
 const store = { 'target:1': target },
   listeners = [];
 window.chrome = {
-  runtime: { getManifest: () => ({ version: window.demoVersion }) },
+  runtime: { getManifest: () => ({ version }) },
   windows: { getCurrent: async () => ({ id: 1 }) },
   storage: {
     session: {
@@ -30,28 +31,11 @@ window.chrome = {
   scripting: {
     executeScript: async ({ args }) => {
       const command = args[1];
-      let value;
-      if (command.type === 'read') {
-        const s = await backend.read();
-        value = {
-          roster: s.roster.map((r) => ({
-            enrollment: { id: r.id, course_instance_id: '123', status: r.status },
-            user: { uin: r.uin, uid: r.uid, name: r.name },
-          })),
-          labels: {
-            origHash: s.hash,
-            labels: s.labels.map((l) => ({
-              student_label: l,
-              user_data: l.members.map((id) => ({
-                enrollment_id: id,
-                uid: s.roster.find((r) => r.id === id)?.uid ?? 'unknown',
-              })),
-            })),
-          },
-          title: s.title,
-          canEdit: s.canEdit,
-        };
-      } else value = await backend.mutate(command);
+      const s = backend.state;
+      const value =
+        command.type === 'read'
+          ? { ...wire(s), title: s.title, canEdit: s.canEdit }
+          : await backend.mutate(command);
       return [{ documentId: 'demo-document', result: { ok: true, value } }];
     },
   },
@@ -75,4 +59,3 @@ demo.addEventListener('click', () => {
   input.files = transfer.files;
   input.dispatchEvent(new Event('change'));
 });
-await import('../src/panel.js');

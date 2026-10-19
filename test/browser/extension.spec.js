@@ -2,7 +2,7 @@ import { test, expect, chromium } from '@playwright/test';
 import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fakeClient, snapshot } from '../fixtures.js';
+import { fakeClient, snapshot, wire } from '../fixtures.js';
 
 test('installed extension injects the adapter and verifies writes in the source document', async () => {
   const profile = await mkdtemp(join(tmpdir(), 'pl-extension-'));
@@ -40,23 +40,12 @@ test('installed extension injects the adapter and verifies writes in the source 
           body: `<script type="application/json" data-component="InstructorStudents" data-component-props>${JSON.stringify({ json: props })}</script>`,
         });
       } else if (url.pathname.endsWith('/data.json')) {
-        await route.fulfill({
-          json: backend.state.roster.map((s) => ({
-            enrollment: { id: s.id, status: s.status, course_instance_id: '123' },
-            user: s,
-          })),
-        });
+        await route.fulfill({ json: wire(backend.state).roster });
       } else {
         const method = url.pathname.split('.').at(-1);
         const value =
           method === 'list'
-            ? {
-                origHash: backend.state.hash,
-                labels: backend.state.labels.map((l) => ({
-                  student_label: l,
-                  user_data: l.members.map((id) => ({ enrollment_id: id, uid: 'synthetic' })),
-                })),
-              }
+            ? wire(backend.state).labels
             : await backend.mutate({ method, input: route.request().postDataJSON().json });
         await route.fulfill({ json: { result: { data: { json: value } } } });
       }

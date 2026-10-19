@@ -7,10 +7,10 @@
     "types": ["chrome"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "noEmitOnError": true,
     "verbatimModuleSyntax": true,
-    "rootDir": "src",
-    "outDir": "dist/src"
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

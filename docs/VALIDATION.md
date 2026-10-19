@@ -2,7 +2,7 @@
 
 `npm run verify` runs strict TypeScript checks, ESLint, Prettier, unit tests, Chromium browser tests, and extension packaging in the development container.
 
-Automated coverage includes CSV parsing, identity conflicts, label planning, stale-state rejection, partial writes, uncertain responses, cancellation, document binding, injected-function isolation, asynchronous panel imports, deletion approval, recovery, narrow layouts, and mocked store uploads. Fixtures contain synthetic students only.
+Automated coverage includes CSV parsing, identity conflicts, label planning, stale-state rejection, partial writes, uncertain responses, cancellation, document binding, injected-function isolation, asynchronous panel imports, deletion approval, recovery, narrow layouts, visible errors after scrolling, and mocked store uploads. Fixtures contain synthetic students only.
 
 The installed-extension test uses local mock endpoints and adds a localhost permission to a temporary manifest. It verifies real Chrome injection and writes without exercising the toolbar’s `activeTab` grant.
 

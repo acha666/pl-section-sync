@@ -1,12 +1,6 @@
 import { pageRequest } from './bridge.js';
-import {
-  object,
-  parseLabels,
-  parseRoster,
-  requireValue,
-  RequestError,
-  string,
-} from '../core/model.js';
+import { parseSnapshot } from './parse.js';
+import { requireValue, RequestError } from '../core/model.js';
 import type { Client, Command, Context, Reply } from '../core/types.js';
 
 export function createClient(context: Context): Client {
@@ -39,16 +33,7 @@ export function createClient(context: Context): Client {
     return reply.value;
   }
   return {
-    async read() {
-      const data = object(await call({ type: 'read' }));
-      requireValue(typeof data.canEdit === 'boolean', 'Unsupported edit permissions.');
-      return {
-        roster: parseRoster(data.roster, context.courseId),
-        ...parseLabels(data.labels),
-        title: string(data.title),
-        canEdit: data.canEdit,
-      };
-    },
+    read: async () => parseSnapshot(await call({ type: 'read' }), context.courseId),
     mutate: (command) => call({ type: 'write', ...command }),
   };
 }

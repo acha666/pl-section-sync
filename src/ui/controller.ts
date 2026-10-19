@@ -1,13 +1,14 @@
 import { readGradebook, suggestSections } from '../core/csv.js';
 import { matchStudents } from '../core/match.js';
 import { createPlan } from '../core/plan.js';
-import { message, object, requireValue, string } from '../core/model.js';
+import { MAX_CSV_BYTES, message, requireValue } from '../core/model.js';
 import { execute } from '../sync/execute.js';
 import type {
   Client,
   Context,
   Mapping,
   MatchResult,
+  Operation,
   Plan,
   Progress,
   Snapshot,
@@ -41,36 +42,21 @@ export interface State {
   notice: string;
   error: boolean;
   progress?: Progress;
-  log: string[];
+  /** Verified operations of the current sync. */
+  log: Operation[];
 }
 export interface Services {
   client(context: Context): Client;
-  journal(key: string, value?: Progress | true | null): Promise<unknown>;
+  /** Session-scoped recovery markers, normally chrome.storage.session. */
+  storage: Pick<chrome.storage.StorageArea, 'get' | 'set' | 'remove'>;
   lock(task: () => Promise<void>): Promise<boolean>;
 }
-export function parseTarget(value: unknown, windowId: number): Target {
-  const data = object(value);
-  requireValue(data.windowId === windowId, 'Invalid source window.');
-  const identity = { windowId, nonce: string(data.nonce) };
-  if ('error' in data) return { ...identity, error: string(data.error) };
-  const c = object(data.context);
-  requireValue(typeof c.tabId === 'number' && Number.isInteger(c.tabId), 'Invalid source tab.');
-  const origin = string(c.origin),
-    base = string(c.base),
-    courseId = string(c.courseId);
-  requireValue(
-    /^https?:$/.test(new URL(origin).protocol) &&
-      new URL(origin).origin === origin &&
-      /^.*\/course_instance\/\d+\/instructor$/.test(base) &&
-      base.endsWith(`/course_instance/${courseId}/instructor`),
-    'Invalid source course.',
-  );
-  return { ...identity, context: { tabId: c.tabId, origin, base, courseId } };
-}
+export const running = (state: State): boolean =>
+  state.phase === 'applying' || state.phase === 'stopping';
 export function capabilities(state: State) {
   const editable = state.phase === 'editing' || state.phase === 'preview';
   return {
-    refresh: !!state.session && !['loading', 'applying', 'stopping'].includes(state.phase),
+    refresh: !!state.session && state.phase !== 'loading' && !running(state),
     csv: !!state.session && ['ready', 'reading', 'editing', 'preview'].includes(state.phase),
     mapping: editable,
     preview: editable && !!state.matching && !state.matching.errors.length,
@@ -82,17 +68,39 @@ export function capabilities(state: State) {
     stop: state.phase === 'applying',
   };
 }
+const cleared = () => ({
+  session: undefined,
+  matching: undefined,
+  mapping: new Map<string, string[]>(),
+  filename: '',
+  plan: undefined,
+  approved: false,
+  progress: undefined,
+  log: [],
+});
+/** Any mapping or option change requires a new preview and approval. */
+const invalidated = { phase: 'editing', plan: undefined, approved: false } as const;
+/** Trimmed, unique, non-empty label suffixes. */
+export const labelList = (values: string[]) => [
+  ...new Set(values.map((value) => value.trim()).filter(Boolean)),
+];
+const journalKey = (context: Context) => `journal:${context.origin}${context.base}`;
+function interrupted(journal: unknown): string {
+  const { completed, total } = (journal ?? {}) as { completed?: unknown; total?: unknown };
+  const detail =
+    typeof completed === 'number' && typeof total === 'number'
+      ? ` after ${completed} of ${total} operations`
+      : '';
+  return `An earlier sync was interrupted${detail}. Import the same CSV and review the remaining changes.`;
+}
 export class Controller {
   state: State = {
+    ...cleared(),
     phase: 'empty',
-    mapping: new Map(),
-    filename: '',
     replace: false,
     cleanup: true,
-    approved: false,
     notice: 'Open Students or Student labels, then click the extension icon.',
     error: false,
-    log: [],
   };
   private generation = 0;
   private nonce?: string;
@@ -102,7 +110,7 @@ export class Controller {
     private changed: (state: State) => void,
   ) {}
   private update(patch: Partial<State>) {
-    Object.assign(this.state, patch);
+    this.state = { ...this.state, ...patch };
     this.changed(this.state);
   }
   report(error: unknown) {
@@ -110,7 +118,7 @@ export class Controller {
   }
   async accept(target: Target) {
     if (target.nonce === this.nonce) return;
-    if (['applying', 'stopping'].includes(this.state.phase)) {
+    if (running(this.state)) {
       this.update({
         notice:
           'Sync is using the original course. Finish or stop it before selecting another course.',
@@ -118,23 +126,18 @@ export class Controller {
       return;
     }
     this.nonce = target.nonce;
-    if ('error' in target) {
-      ++this.generation;
+    if (!('error' in target)) return this.load(target.context);
+    // Clicking the icon on an unrelated tab must not discard a loaded course.
+    const session = this.state.session;
+    if (session) {
       this.update({
-        phase: 'empty',
-        session: undefined,
-        matching: undefined,
-        plan: undefined,
-        mapping: new Map(),
-        filename: '',
-        progress: undefined,
-        log: [],
-        notice: target.error,
+        notice: `${target.error} Still using ${session.snapshot.title}.`,
         error: true,
       });
       return;
     }
-    await this.load(target.context);
+    ++this.generation;
+    this.update({ ...cleared(), phase: 'empty', notice: target.error, error: true });
   }
   async refresh() {
     if (capabilities(this.state).refresh && this.state.session)
@@ -143,39 +146,28 @@ export class Controller {
   private async load(context: Context) {
     const generation = ++this.generation;
     const client = this.services.client(context);
-    this.update({
-      phase: 'loading',
-      session: undefined,
-      matching: undefined,
-      plan: undefined,
-      mapping: new Map(),
-      filename: '',
-      progress: undefined,
-      log: [],
-      approved: false,
-      notice: 'Loading students…',
-      error: false,
-    });
+    this.update({ ...cleared(), phase: 'loading', notice: 'Loading students…', error: false });
     try {
-      const snapshot = await client.read();
-      const unfinished = await this.services.journal(this.journalKey(context));
+      const key = journalKey(context);
+      const [snapshot, stored] = await Promise.all([client.read(), this.services.storage.get(key)]);
       if (generation !== this.generation) return;
+      const journal = stored[key];
       this.update({
         phase: 'ready',
         session: { context, client, snapshot },
-        notice: unfinished
-          ? 'An earlier sync was interrupted. Import the same CSV and review the remaining changes.'
+        notice: journal
+          ? interrupted(journal)
           : snapshot.canEdit
             ? ''
             : 'Preview only. This account cannot edit students.',
-        error: !!unfinished,
+        error: !!journal,
       });
     } catch (error) {
       if (generation === this.generation)
         this.update({ phase: 'empty', notice: message(error), error: true });
     }
   }
-  async importCsv(file: { name: string; size: number; text(): Promise<string> }) {
+  async importCsv(file: Pick<File, 'name' | 'size' | 'text'>) {
     const session = this.state.session;
     if (!session || !capabilities(this.state).csv) return;
     const generation = ++this.generation;
@@ -190,7 +182,7 @@ export class Controller {
       error: false,
     });
     try {
-      requireValue(file.size <= 20 * 1024 * 1024, 'CSV exceeds 20 MB.');
+      requireValue(file.size <= MAX_CSV_BYTES, 'CSV exceeds 20 MB.');
       const text = await file.text();
       if (generation !== this.generation) return;
       const matching = matchStudents(readGradebook(text), session.snapshot.roster);
@@ -212,42 +204,30 @@ export class Controller {
         error: matching.errors.length > 0,
       });
     } catch (error) {
+      // Clearing the filename resets the file input, so the corrected file can be chosen again.
       if (generation === this.generation)
-        this.update({ phase: 'ready', notice: message(error), error: true });
+        this.update({ phase: 'ready', filename: '', notice: message(error), error: true });
     }
   }
   edit(section: string, text: string) {
     if (!capabilities(this.state).mapping) return;
-    this.state.mapping.set(section, [
-      ...new Set(
-        text
-          .split('\n')
-          .map((s) => s.trim())
-          .filter(Boolean),
-      ),
-    ]);
-    this.update({ phase: 'editing', plan: undefined, approved: false });
+    const mapping = new Map(this.state.mapping).set(section, labelList(text.split('\n')));
+    this.update({ mapping, ...invalidated });
   }
   replaceLabels(pattern: string, replacement: string) {
     if (!capabilities(this.state).mapping) return;
     try {
-      requireValue(pattern.length > 0, 'Enter a regular expression.');
+      requireValue(pattern, 'Enter a regular expression.');
       const regex = new RegExp(pattern, 'g');
       const mapping = new Map(
         [...this.state.mapping].map(([section, labels]) => [
           section,
-          [
-            ...new Set(
-              labels.map((label) => label.replace(regex, replacement).trim()).filter(Boolean),
-            ),
-          ],
+          labelList(labels.map((label) => label.replace(regex, replacement))),
         ]),
       );
       this.update({
         mapping,
-        phase: 'editing',
-        plan: undefined,
-        approved: false,
+        ...invalidated,
         notice: 'Replacement applied. Review the section labels before previewing.',
         error: false,
       });
@@ -257,7 +237,7 @@ export class Controller {
   }
   options(replace: boolean, cleanup: boolean) {
     if (!capabilities(this.state).mapping) return;
-    this.update({ replace, cleanup, phase: 'editing', plan: undefined, approved: false });
+    this.update({ replace, cleanup, ...invalidated });
   }
   preview() {
     const { session, matching, mapping, replace, cleanup } = this.state;
@@ -268,8 +248,6 @@ export class Controller {
         phase: 'preview',
         plan,
         approved: false,
-        progress: undefined,
-        log: [],
         error: false,
         notice: plan.changes.length
           ? session.snapshot.canEdit
@@ -278,11 +256,11 @@ export class Controller {
           : 'No changes needed.',
       });
     } catch (error) {
-      this.update({ plan: undefined, phase: 'editing', notice: message(error), error: true });
+      this.update({ ...invalidated, notice: message(error), error: true });
     }
   }
   approve(value: boolean) {
-    this.update({ approved: value });
+    if (this.state.phase === 'preview') this.update({ approved: value });
   }
   stop() {
     if (!capabilities(this.state).stop) return;
@@ -292,13 +270,9 @@ export class Controller {
       notice: 'Stopping after the current request and verification…',
     });
   }
-  private journalKey(context: Context) {
-    return `journal:${context.origin}${context.base}`;
-  }
   async apply() {
-    if (!capabilities(this.state).apply) return;
     const { session, plan } = this.state;
-    if (!session || !plan) return;
+    if (!session || !plan || !capabilities(this.state).apply) return;
     // Freeze the selected session before waiting for a cross-panel lock.
     this.abort = new AbortController();
     const signal = this.abort.signal;
@@ -311,19 +285,23 @@ export class Controller {
     });
     try {
       const acquired = await this.services.lock(async () => {
-        const key = this.journalKey(session.context);
+        const key = journalKey(session.context);
         try {
-          await this.services.journal(key, true);
           const snapshot = await execute(session.client, session.snapshot, plan, {
             signal,
             onProgress: async (progress) => {
-              await this.services.journal(key, progress);
-              if (progress.phase === 'verified')
-                this.state.log.push(`${progress.type}: ${progress.name}`);
-              this.update({ progress });
+              // Recorded before each write, so a closed panel leaves a recovery reminder.
+              const { completed, total } = progress;
+              await this.services.storage.set({ [key]: { completed, total } });
+              this.update({
+                progress,
+                ...(progress.phase === 'verified' && {
+                  log: [...this.state.log, progress.operation],
+                }),
+              });
             },
           });
-          await this.services.journal(key, null);
+          await this.services.storage.remove(key);
           this.update({
             session: { ...session, snapshot },
             notice: 'Changes verified. Refresh the PrairieLearn page.',

@@ -1,9 +1,10 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { parseCsv, readGradebook, suggestSections } from '../dist/src/core/csv.js';
-import { contextFromUrl, parseRoster, parseLabels } from '../dist/src/core/model.js';
-import { matchStudents } from '../dist/src/core/match.js';
-import { createPlan } from '../dist/src/core/plan.js';
+import { parseCsv, readGradebook, suggestSections } from '../src/core/csv.ts';
+import { contextFromUrl } from '../src/pl/context.ts';
+import { parseRoster, parseLabels } from '../src/pl/parse.ts';
+import { matchStudents } from '../src/core/match.ts';
+import { createPlan } from '../src/core/plan.ts';
 import { snapshot } from './fixtures.js';
 const csv = (rows) => `Student,ID,SIS Login ID,Section\n${rows}`;
 const gradebook = () => readGradebook(csv('One,10,001,New'));
@@ -17,7 +18,14 @@ test('CSV preserves leading zeros, BOM, commas, escaped quotes, and multiline te
   ]);
 });
 test('CSV rejects malformed quoting and incomplete records', () => {
-  for (const text of ['"abc', 'ab"c', '"a"b']) assert.throws(() => parseCsv(text), /CSV/);
+  for (const text of ['"abc', '"a"b']) assert.throws(() => parseCsv(text), /CSV/);
+  // A quote inside an unquoted field cannot shift columns, so it is kept as text.
+  assert.deepEqual(parseCsv('ab"c'), [['ab"c']]);
+  assert.deepEqual(parseCsv('A,B\r\n1,2\n3,4\r,\r\n'), [
+    ['A', 'B'],
+    ['1', '2'],
+    ['3', '4'],
+  ]);
   assert.throws(() => readGradebook(csv('One,10,001')), /fields/);
 });
 test('required headers and duplicate headers are checked', () => {
@@ -79,6 +87,10 @@ test('partial import preserves outside and non-joined memberships and other labe
     false,
   );
   assert.deepEqual(p.summary, { create: 1, destroy: 1, add: 1, remove: 1 });
+  assert.deepEqual(
+    p.changes.map((c) => c.name),
+    ['section Empty', 'Section New', 'Section Old'],
+  );
 });
 test('full replacement removes only joined students outside import', () => {
   const s = snapshot();
@@ -112,6 +124,7 @@ test('limits and cleanup preference are enforced', () => {
     m = matchStudents(gradebook(), s.roster);
   assert.equal(createPlan(s, m, mapping(), { cleanup: false }).summary.destroy, 0);
   assert.throws(() => createPlan(s, m, new Map([['New', ['x'.repeat(255)]]])), /255/);
+  assert.throws(() => createPlan(s, m, new Map([['New', ['a\u0085b']]])), /control/);
   for (let i = s.labels.length; i < 100; i++)
     s.labels.push({ id: `x${i}`, name: `Other ${i}`, members: [], color: 'blue1', uuid: `x${i}` });
   assert.throws(() => createPlan(s, m, mapping()), /100-label/);

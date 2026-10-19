@@ -1,7 +1,9 @@
-import { contextFromUrl, message, requireValue } from './core/model.js';
+import { message, requireValue } from './core/model.js';
 import type { Target } from './core/types.js';
+import { contextFromUrl } from './pl/context.js';
 
 chrome.action.onClicked.addListener((tab) => {
+  // sidePanel.open must be called synchronously within the user gesture.
   const opening = chrome.sidePanel.open({ windowId: tab.windowId });
   let target: Target;
   const identity = { windowId: tab.windowId, nonce: crypto.randomUUID() };
@@ -11,10 +13,12 @@ chrome.action.onClicked.addListener((tab) => {
   } catch (error) {
     target = { ...identity, error: message(error) };
   }
-  void chrome.storage.session
-    .set({ [`target:${tab.windowId}`]: target })
-    .catch(() => chrome.action.setBadgeText({ tabId: tab.id, text: '!' }));
-  void opening
-    .then(() => chrome.action.setBadgeText({ tabId: tab.id, text: '' }))
-    .catch(() => chrome.action.setBadgeText({ tabId: tab.id, text: '!' }));
+  const badge = (text: string) => chrome.action.setBadgeText({ tabId: tab.id, text });
+  void Promise.all([
+    opening,
+    chrome.storage.session.set({ [`target:${tab.windowId}`]: target }),
+  ]).then(
+    () => badge(''),
+    () => badge('!'),
+  );
 });

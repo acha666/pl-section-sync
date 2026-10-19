@@ -14,9 +14,9 @@ export default tseslint.config(
     ],
   },
   js.configs.recommended,
-  ...tseslint.configs.recommended.map((config) => ({ ...config, files: ['src/**/*.ts'] })),
+  ...tseslint.configs.recommended.map((config) => ({ ...config, files: ['src/**/*.{ts,tsx}'] })),
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.{ts,tsx}'],
     languageOptions: { globals: { ...globals.browser, chrome: 'readonly' } },
   },
   {
@@ -24,7 +24,7 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.{ts,tsx}'],
     languageOptions: { parserOptions: { project: './tsconfig.json' } },
     rules: {
       '@typescript-eslint/no-floating-promises': 'error',

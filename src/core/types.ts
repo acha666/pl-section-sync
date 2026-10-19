@@ -78,8 +78,8 @@ export type Operation = { key: string; name: string } & (
 );
 export interface Progress {
   phase: 'sending' | 'verified';
-  index: number;
+  /** Operations verified so far. */
+  completed: number;
   total: number;
-  type: Operation['type'];
-  name: string;
+  operation: Operation;
 }
